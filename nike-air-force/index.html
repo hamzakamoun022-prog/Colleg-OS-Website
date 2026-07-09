@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nike Air Force 1 — 3D Experience</title>
+<meta name="description" content="An interactive 3D tribute to the Nike Air Force 1 — the sneaker that changed everything.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-a: #0d0d0f;
+    --bg-b: #1a1a1e;
+    --accent: #fa5400;
+    --ink: #f5f5f2;
+    --ink-dim: #9a9a96;
+    --panel: rgba(20, 20, 23, 0.72);
+    --line: rgba(245, 245, 242, 0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    background: radial-gradient(120% 90% at 70% 20%, var(--bg-b) 0%, var(--bg-a) 60%);
+    overflow-x: hidden;
+    transition: background 1.2s ease;
+  }
+  body.cw-black { background: radial-gradient(120% 90% at 70% 20%, #26262b 0%, #0a0a0c 60%); }
+  body.cw-red   { background: radial-gradient(120% 90% at 70% 20%, #2b1114 0%, #0f0a0a 60%); }
+  body.cw-royal { background: radial-gradient(120% 90% at 70% 20%, #101a33 0%, #090b12 60%); }
+  body.cw-wheat { background: radial-gradient(120% 90% at 70% 20%, #2b2214 0%, #120e08 60%); }
+
+  #stage {
+    position: fixed; inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  #stage canvas { display: block; }
+
+  .grain {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 22px 48px;
+    mix-blend-mode: normal;
+  }
+  .nav-logo {
+    font-family: 'Anton', sans-serif; font-size: 20px; letter-spacing: 2px;
+    color: var(--ink); text-transform: uppercase;
+  }
+  .nav-logo em { font-style: normal; color: var(--accent); }
+  .nav-tag {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  main { position: relative; z-index: 1; }
+
+  section {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 120px 48px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { flex-direction: column; justify-content: center; text-align: center; }
+  .hero-kicker {
+    font-size: 12px; letter-spacing: 6px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(64px, 14vw, 190px);
+    line-height: 0.92;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .hero h1 .outline {
+    display: block;
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(245,245,242,0.5);
+  }
+  .hero-sub {
+    margin-top: 26px; max-width: 460px;
+    color: var(--ink-dim); font-size: 15px; line-height: 1.7; font-weight: 300;
+  }
+  .scroll-hint {
+    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--ink-dim);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .scroll-hint::after {
+    content: ''; width: 1px; height: 44px;
+    background: linear-gradient(var(--accent), transparent);
+    animation: drip 2s ease-in-out infinite;
+  }
+  @keyframes drip { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  /* ---------- Shared panel ---------- */
+  .panel {
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 48px;
+    max-width: 520px;
+  }
+  .num {
+    font-family: 'Anton', sans-serif; font-size: 13px; letter-spacing: 3px;
+    color: var(--accent); margin-bottom: 14px;
+  }
+  h2 {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(34px, 4.5vw, 56px);
+    text-transform: uppercase; line-height: 1.02; letter-spacing: 0.5px;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 26px rgba(0,0,0,0.55);
+  }
+  .panel p { color: var(--ink-dim); font-size: 15px; line-height: 1.8; font-weight: 300; }
+  .panel p + p { margin-top: 14px; }
+  .panel strong { color: var(--ink); font-weight: 500; }
+
+  .align-right { justify-content: flex-end; }
+  .align-left  { justify-content: flex-start; }
+
+  /* ---------- Details ---------- */
+  .details-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    max-width: 1100px; margin: 0 auto; width: 100%;
+  }
+  .detail-card {
+    background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line); border-radius: 4px; padding: 34px 30px;
+  }
+  .detail-card h3 {
+    font-family: 'Anton', sans-serif; font-size: 19px; letter-spacing: 1px;
+    text-transform: uppercase; margin: 14px 0 10px;
+  }
+  .detail-card p { color: var(--ink-dim); font-size: 13.5px; line-height: 1.7; font-weight: 300; }
+  .detail-icon {
+    width: 38px; height: 38px; border: 1px solid var(--accent); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Anton', sans-serif; font-size: 15px; color: var(--accent);
+  }
+  .details-head { grid-column: 1 / -1; margin-bottom: 8px; }
+  .details-head h2 { margin-bottom: 8px; }
+  .details-head p { color: var(--ink-dim); font-size: 14px; font-weight: 300; }
+
+  /* ---------- Colorways ---------- */
+  .colorways { flex-direction: column; justify-content: center; text-align: center; }
+  .cw-swatches {
+    display: flex; gap: 14px; margin-top: 30px; flex-wrap: wrap; justify-content: center;
+  }
+  .cw-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    background: none; border: none; cursor: pointer; padding: 10px 6px;
+    color: var(--ink-dim); font-family: 'Inter', sans-serif;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    transition: color 0.25s;
+  }
+  .cw-btn .dot {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 2px solid transparent;
+    transition: transform 0.25s, border-color 0.25s;
+    box-shadow: inset 0 0 0 3px var(--bg-a);
+  }
+  .cw-btn:hover .dot { transform: scale(1.1); }
+  .cw-btn.active { color: var(--ink); }
+  .cw-btn.active .dot { border-color: var(--accent); transform: scale(1.12); }
+  .cw-name-big {
+    font-family: 'Anton', sans-serif; text-transform: uppercase;
+    font-size: clamp(22px, 3vw, 34px); letter-spacing: 1px;
+    margin-top: 34px; color: var(--ink); min-height: 1.2em;
+  }
+  .cw-spacer { height: 32vh; }
+
+  /* ---------- Stats / footer ---------- */
+  .finale { flex-direction: column; justify-content: center; text-align: center; min-height: 100vh; }
+  .stats {
+    display: flex; gap: clamp(30px, 6vw, 90px); justify-content: center; flex-wrap: wrap;
+    margin: 44px 0;
+  }
+  .stat .value {
+    font-family: 'Anton', sans-serif; font-size: clamp(40px, 6vw, 76px);
+    color: var(--ink); line-height: 1;
+  }
+  .stat .label {
+    margin-top: 10px; font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--ink-dim);
+  }
+  footer {
+    padding: 40px 48px 50px; text-align: center;
+    color: var(--ink-dim); font-size: 11px; letter-spacing: 1px; line-height: 2;
+    position: relative; z-index: 1;
+  }
+  footer a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--accent); }
+
+  /* ---------- Reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(36px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  #no-webgl {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: var(--bg-a); color: var(--ink);
+    align-items: center; justify-content: center; text-align: center; padding: 40px;
+    font-size: 15px; line-height: 1.8;
+  }
+
+  @media (max-width: 860px) {
+    nav { padding: 18px 24px; }
+    section { padding: 100px 24px; }
+    .details-grid { grid-template-columns: 1fr; max-width: 520px; }
+    .panel { padding: 34px 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="grain"></div>
+<div id="no-webgl"><p>This experience needs WebGL.<br>Please open it in a modern browser.</p></div>
+
+<nav>
+  <div class="nav-logo">AIR FORCE <em>1</em></div>
+  <div class="nav-tag">Est. 1982 — 3D Tribute</div>
+</nav>
+
+<main>
+
+  <section class="hero" id="hero">
+    <div class="hero-kicker reveal">The icon, rebuilt in your browser</div>
+    <h1 class="reveal">
+      Nike Air
+      <span class="outline">Force 1</span>
+    </h1>
+    <p class="hero-sub reveal">
+      Forty years of court heritage, street culture and two thousand colorways —
+      distilled into one silhouette. Scroll to walk around it.
+    </p>
+    <div class="scroll-hint">Scroll</div>
+  </section>
+
+  <section class="align-left">
+    <div class="panel reveal">
+      <div class="num">01 / LEGACY</div>
+      <h2>Born on<br>hardwood</h2>
+      <p>
+        In <strong>1982</strong>, designer <strong>Bruce Kilgore</strong> put a full-length
+        Nike&nbsp;Air unit into a basketball shoe for the first time. The Air Force&nbsp;1 —
+        named after the presidential aircraft — landed on NBA courts under the
+        “Original Six”: Moses Malone, Michael Cooper, Bobby Jones, Calvin Natt,
+        Mychal Thompson and Jamaal Wilkes.
+      </p>
+      <p>
+        Discontinued in 1984, it was resurrected two years later by demand from
+        Baltimore sneaker shops — one of the first retros in history. The court
+        shoe became a street uniform, and the street never gave it back.
+      </p>
+    </div>
+  </section>
+
+  <section class="align-right">
+    <div class="panel reveal">
+      <div class="num">02 / ANATOMY</div>
+      <h2>Built like<br>a monument</h2>
+      <p>
+        The AF-1 doesn’t whisper. A <strong>chunky cupsole</strong> with concentric-circle
+        pivot outsole, <strong>full-grain leather upper</strong> in stacked panels, a proud
+        toe box and the Swoosh riding the midfoot like a signature.
+      </p>
+      <p>
+        Every proportion is deliberate: heavy where it should feel planted,
+        clean where it should stay timeless. It’s the reason a 40-year-old
+        design still looks current out of the box.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="details-grid">
+      <div class="details-head reveal">
+        <div class="num">03 / DETAILS</div>
+        <h2>The parts that made it immortal</h2>
+        <p>Three decisions in 1982 that still define sneaker design.</p>
+      </div>
+      <div class="detail-card reveal">
+        <div class="detail-icon">A</div>
+        <h3>Nike Air Cushioning</h3>
+        <p>The first basketball shoe with encapsulated Air. The unit is invisible —
+        no window, no logo on the bag — pure function hidden in the midsole.</p>
+      </div>
+      <div class="detail-card reveal">
+        <div class="detail-icon">B</div>
+        <h3>Pivot-Point Outsole</h3>
+        <p>Concentric circles under the forefoot let players rotate without tearing
+        up their knees — and gave the sole its unmistakable footprint.</p>
+      </div>
+      <div class="detail-card reveal">
+        <div class="detail-icon">C</div>
+        <h3>Proclip Ankle Strap</h3>
+        <p>The original high-top shipped with a removable ankle strap — a medical-grade
+        stability idea that became a styling statement.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="colorways" id="colorways">
+    <div class="reveal">
+      <div class="num">04 / COLORWAYS</div>
+      <h2>Pick your pair</h2>
+      <p style="color:var(--ink-dim); font-size:14px; font-weight:300;">
+        Over 2,000 official colorways exist. Here are five classics — tap to repaint the shoe.
+      </p>
+    </div>
+    <div class="cw-swatches reveal" id="cw-swatches"></div>
+    <div class="cw-name-big" id="cw-name">Triple White</div>
+    <div class="cw-spacer"></div>
+  </section>
+
+  <section class="finale">
+    <div class="reveal">
+      <div class="num">05 / LEGACY IN NUMBERS</div>
+      <h2>Still undefeated</h2>
+    </div>
+    <div class="stats reveal">
+      <div class="stat"><div class="value">1982</div><div class="label">Year of release</div></div>
+      <div class="stat"><div class="value">2,000+</div><div class="label">Official colorways</div></div>
+      <div class="stat"><div class="value">#1</div><div class="label">Best-selling sneaker, all time</div></div>
+      <div class="stat"><div class="value">40+</div><div class="label">Years in production</div></div>
+    </div>
+    <p class="reveal" style="max-width:480px; margin:0 auto; color:var(--ink-dim); font-size:14px; line-height:1.8; font-weight:300;">
+      From Moses Malone to your local corner store: the Air Force 1 is proof that
+      the best designs don’t age — they accumulate stories.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  Unofficial fan tribute — not affiliated with or endorsed by Nike, Inc.<br>
+  “Nike”, “Air Force 1” and the Swoosh are trademarks of Nike, Inc. · 3D model generated procedurally with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>
+</footer>
+
+<script type="importmap">
+{ "imports": { "three": "./three.module.min.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ------------------------------------------------------------------ setup
+const stage = document.getElementById('stage');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+} catch (e) {
+  document.getElementById('no-webgl').style.display = 'flex';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 60);
+camera.position.set(0, 1.3, 6.4);
+
+// ------------------------------------------------------------------ lights
+scene.add(new THREE.HemisphereLight(0xf4f2ee, 0x1a1a20, 0.85));
+
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
+key.position.set(4, 6, 5);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -5; key.shadow.camera.right = 5;
+key.shadow.camera.top = 5;   key.shadow.camera.bottom = -5;
+key.shadow.radius = 6;
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0xfa5400, 0.7);
+rim.position.set(-5, 3, -4);
+scene.add(rim);
+
+const fill = new THREE.DirectionalLight(0x8899ff, 0.45);
+fill.position.set(-3, 2, 5);
+scene.add(fill);
+
+// ground shadow catcher
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.ShadowMaterial({ opacity: 0.32 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ------------------------------------------------------------------ materials
+const mats = {
+  upper:   new THREE.MeshStandardMaterial({ color: 0xf4f2ec, roughness: 0.5,  metalness: 0.03 }),
+  swoosh:  new THREE.MeshStandardMaterial({ color: 0xe9e6de, roughness: 0.45, metalness: 0.05, side: THREE.DoubleSide }),
+  midsole: new THREE.MeshStandardMaterial({ color: 0xf7f5f0, roughness: 0.62 }),
+  outsole: new THREE.MeshStandardMaterial({ color: 0xe4ded2, roughness: 0.85 }),
+  laces:   new THREE.MeshStandardMaterial({ color: 0xf7f5f0, roughness: 0.75 }),
+  lining:  new THREE.MeshStandardMaterial({ color: 0xd9d5cc, roughness: 0.85 }),
+};
+
+// ------------------------------------------------------------------ shoe geometry
+function footprintShape(inset = 0) {
+  // top-down outline of the sole, x = heel→toe, y = width
+  const i = inset;
+  const s = new THREE.Shape();
+  s.moveTo(-1.35 + i, 0);
+  s.bezierCurveTo(-1.52 + i, 0.26 - i, -1.46 + i, 0.5 - i, -1.12, 0.55 - i);
+  s.bezierCurveTo(-0.55, 0.62 - i, 0.25, 0.58 - i, 0.8, 0.6 - i);
+  s.bezierCurveTo(1.34 - i, 0.6 - i, 1.6 - i, 0.38 - i, 1.6 - i, 0.04);
+  s.bezierCurveTo(1.6 - i, -0.34 + i, 1.3 - i, -0.55 + i, 0.8, -0.55 + i);
+  s.bezierCurveTo(0.25, -0.55 + i, -0.55, -0.48 + i, -1.12, -0.43 + i);
+  s.bezierCurveTo(-1.42 + i, -0.38 + i, -1.48 + i, -0.18 + i, -1.35 + i, 0);
+  return s;
+}
+
+function soleLayer(shape, depth, bevel) {
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth, bevelEnabled: true,
+    bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 24,
+  });
+  g.rotateX(-Math.PI / 2); // extrusion now runs along +Y
+  return g;
+}
+
+function upperProfile() {
+  // side profile, x = heel→toe, y = height above sole
+  const s = new THREE.Shape();
+  s.moveTo(-1.22, 0);
+  s.bezierCurveTo(-1.44, 0.28, -1.4, 0.72, -1.12, 0.86);  // heel curve
+  s.bezierCurveTo(-0.98, 0.93, -0.82, 0.9, -0.68, 0.82);  // collar
+  s.bezierCurveTo(-0.38, 0.64, 0.12, 0.48, 0.55, 0.38);   // lace line
+  s.bezierCurveTo(1.0, 0.27, 1.32, 0.2, 1.46, 0.06);      // toe drop
+  s.bezierCurveTo(1.52, 0.0, 1.46, -0.03, 1.36, -0.03);
+  s.lineTo(-1.22, -0.03);
+  s.closePath();
+  return s;
+}
+
+const shoe = new THREE.Group();
+
+// outsole + midsole (the famous stacked AF-1 cupsole)
+const outsoleGeo = soleLayer(footprintShape(0.02), 0.1, 0.025);
+const outsoleMesh = new THREE.Mesh(outsoleGeo, mats.outsole);
+outsoleMesh.position.y = 0.025;
+shoe.add(outsoleMesh);
+
+const midsoleGeo = soleLayer(footprintShape(0), 0.24, 0.035);
+const midsoleMesh = new THREE.Mesh(midsoleGeo, mats.midsole);
+midsoleMesh.position.y = 0.15;
+shoe.add(midsoleMesh);
+
+// upper
+const upperGeo = new THREE.ExtrudeGeometry(upperProfile(), {
+  depth: 0.62, bevelEnabled: true,
+  bevelThickness: 0.14, bevelSize: 0.15, bevelSegments: 6, curveSegments: 24,
+});
+upperGeo.translate(0, 0, -0.31);
+const upperMesh = new THREE.Mesh(upperGeo, mats.upper);
+upperMesh.position.y = 0.4;
+shoe.add(upperMesh);
+
+// toe-cap overlay (stacked-panel look)
+const capShape = new THREE.Shape();
+capShape.moveTo(0.42, -0.02);
+capShape.bezierCurveTo(0.75, 0.3, 1.05, 0.28, 1.42, 0.1);
+capShape.bezierCurveTo(1.5, 0.04, 1.46, -0.02, 1.36, -0.02);
+capShape.lineTo(0.42, -0.02);
+capShape.closePath();
+const capGeo = new THREE.ExtrudeGeometry(capShape, {
+  depth: 0.66, bevelEnabled: true,
+  bevelThickness: 0.13, bevelSize: 0.14, bevelSegments: 5, curveSegments: 20,
+});
+capGeo.translate(0, 0, -0.33);
+const capMesh = new THREE.Mesh(capGeo, mats.upper);
+capMesh.position.y = 0.41;
+capMesh.scale.set(1.01, 0.96, 1.02);
+shoe.add(capMesh);
+
+// ankle collar
+const collar = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.085, 16, 40), mats.lining);
+collar.rotation.x = Math.PI / 2;
+collar.rotation.y = 0.18;
+collar.position.set(-0.84, 1.32, 0);
+collar.scale.set(1.3, 1, 1);
+shoe.add(collar);
+
+// dark interior of the opening
+const opening = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.24, 0.21, 0.22, 28, 1, true),
+  new THREE.MeshStandardMaterial({ color: 0x15130f, roughness: 1, side: THREE.DoubleSide })
+);
+opening.position.set(-0.84, 1.24, 0);
+opening.scale.set(1.3, 1, 1);
+shoe.add(opening);
+
+// tongue
+const tongue = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.3, 6, 14), mats.upper);
+tongue.rotation.z = -0.9;
+tongue.position.set(-0.42, 1.24, 0);
+tongue.scale.set(1, 1, 1.6);
+shoe.add(tongue);
+
+// laces — arcs marching down the lace line
+const laceLineStart = new THREE.Vector3(-0.44, 1.26, 0);
+const laceLineEnd   = new THREE.Vector3(0.55, 0.94, 0);
+for (let i = 0; i < 6; i++) {
+  const t = i / 5;
+  const p = laceLineStart.clone().lerp(laceLineEnd, t);
+  const lace = new THREE.Mesh(
+    new THREE.TorusGeometry(0.28 - t * 0.03, 0.045, 10, 24, Math.PI),
+    mats.laces
+  );
+  lace.rotation.y = Math.PI / 2;   // arc spans across the shoe (z axis)
+  lace.scale.y = 0.5;              // flatten the arc
+  lace.position.copy(p);
+  shoe.add(lace);
+}
+
+// swoosh
+function swooshShape() {
+  // tail at upper-left, body dips low, sharp tip sweeping up to the right
+  const s = new THREE.Shape();
+  s.moveTo(0, 0.55);
+  s.bezierCurveTo(0.3, 0.1, 0.75, -0.08, 1.25, 0.0);
+  s.bezierCurveTo(1.85, 0.1, 2.4, 0.5, 2.7, 1.15);   // bottom edge → tip
+  s.bezierCurveTo(2.2, 0.55, 1.5, 0.2, 0.95, 0.28);  // top edge back
+  s.bezierCurveTo(0.6, 0.33, 0.35, 0.42, 0.22, 0.66);
+  s.closePath();
+  return s;
+}
+const swooshGeo = new THREE.ExtrudeGeometry(swooshShape(), {
+  depth: 0.035, bevelEnabled: true,
+  bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2, curveSegments: 24,
+});
+swooshGeo.scale(0.48, 0.48, 1);
+swooshGeo.center();
+const swooshL = new THREE.Mesh(swooshGeo, mats.swoosh);
+swooshL.position.set(-0.1, 0.72, 0.47);
+swooshL.rotation.y = -0.06;
+shoe.add(swooshL);
+const swooshR = swooshL.clone();
+swooshR.position.z = -0.47;
+swooshR.rotation.y = Math.PI + 0.06;
+shoe.add(swooshR);
+
+shoe.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+shoe.scale.setScalar(0.92);
+shoe.position.y = 0.35;
+scene.add(shoe);
+
+// ------------------------------------------------------------------ colorways
+const colorways = [
+  { name: 'Triple White', cls: '',        upper: 0xf4f2ec, swoosh: 0xe9e6de, midsole: 0xf7f5f0, outsole: 0xe4ded2, laces: 0xf7f5f0 },
+  { name: 'Triple Black', cls: 'cw-black', upper: 0x1b1b1e, swoosh: 0x2a2a2e, midsole: 0x202024, outsole: 0x141416, laces: 0x232326 },
+  { name: 'University Red', cls: 'cw-red', upper: 0xf4f2ec, swoosh: 0xd7263d, midsole: 0xf7f5f0, outsole: 0xd7263d, laces: 0xf7f5f0 },
+  { name: 'Game Royal', cls: 'cw-royal',  upper: 0xf4f2ec, swoosh: 0x1d4ed8, midsole: 0xf7f5f0, outsole: 0x1d4ed8, laces: 0xf7f5f0 },
+  { name: 'Flax Wheat', cls: 'cw-wheat',  upper: 0xc9974d, swoosh: 0xb07a3f, midsole: 0xe8ddc8, outsole: 0x9a6b35, laces: 0xc9974d },
+];
+const targets = {};
+for (const k of ['upper', 'swoosh', 'midsole', 'outsole', 'laces']) {
+  targets[k] = mats[k].color.clone();
+}
+function applyColorway(cw, btn) {
+  for (const k of Object.keys(targets)) targets[k].setHex(cw[k]);
+  document.body.className = cw.cls;
+  document.getElementById('cw-name').textContent = cw.name;
+  document.querySelectorAll('.cw-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+const swatchRow = document.getElementById('cw-swatches');
+colorways.forEach((cw, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'cw-btn' + (i === 0 ? ' active' : '');
+  const dot = document.createElement('span');
+  dot.className = 'dot';
+  const a = '#' + cw.upper.toString(16).padStart(6, '0');
+  const b = '#' + cw.swoosh.toString(16).padStart(6, '0');
+  dot.style.background = `linear-gradient(135deg, ${a} 50%, ${b} 50%)`;
+  btn.appendChild(dot);
+  btn.appendChild(document.createTextNode(cw.name));
+  btn.addEventListener('click', () => applyColorway(cw, btn));
+  swatchRow.appendChild(btn);
+});
+
+// ------------------------------------------------------------------ scroll choreography
+// keyframes across the page: shoe position/rotation + camera
+const kf = [
+  { p: 0.00, x: 0.0,  rotY: -0.55, rotX: 0.0,  lift: 0.0,   camY: 1.25, camZ: 7.4 },  // hero: 3/4 view
+  { p: 0.20, x: 1.25, rotY:  0.10, rotX: 0.0,  lift: 0.0,   camY: 0.95, camZ: 6.6 },  // legacy: lateral side
+  { p: 0.42, x: -1.25, rotY: 3.45, rotX: 0.0,  lift: 0.0,   camY: 0.90, camZ: 6.4 },  // anatomy: medial side
+  { p: 0.62, x: 0.0,  rotY:  5.2,  rotX: 0.45, lift: 0.0,   camY: 2.0,  camZ: 6.8 },  // details: top-down tilt
+  { p: 0.80, x: 0.0,  rotY:  5.85, rotX: 0.0,  lift: -1.45, camY: 1.0,  camZ: 6.6 },  // colorways: below the picker
+  { p: 1.00, x: 0.0,  rotY:  7.5,  rotX: -0.1, lift: -1.3,  camY: 1.2,  camZ: 7.6 },  // finale: below the stats
+];
+const smooth = t => t * t * (3 - 2 * t);
+function sampleKeyframes(p) {
+  let a = kf[0], b = kf[kf.length - 1];
+  for (let i = 0; i < kf.length - 1; i++) {
+    if (p >= kf[i].p && p <= kf[i + 1].p) { a = kf[i]; b = kf[i + 1]; break; }
+  }
+  const t = a === b ? 0 : smooth((p - a.p) / (b.p - a.p));
+  const lerp = (u, v) => u + (v - u) * t;
+  return {
+    x: lerp(a.x, b.x), rotY: lerp(a.rotY, b.rotY), rotX: lerp(a.rotX, b.rotX),
+    lift: lerp(a.lift, b.lift),
+    camY: lerp(a.camY, b.camY), camZ: lerp(a.camZ, b.camZ),
+  };
+}
+
+let scrollP = 0;
+function readScroll() {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  scrollP = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+}
+window.addEventListener('scroll', readScroll, { passive: true });
+readScroll();
+
+// pointer parallax
+const pointer = { x: 0, y: 0 };
+window.addEventListener('pointermove', e => {
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
+});
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------ render loop
+const clock = new THREE.Clock();
+function tick() {
+  requestAnimationFrame(tick);
+  const t = clock.getElapsedTime();
+  const s = sampleKeyframes(scrollP);
+
+  // color transitions
+  for (const k of Object.keys(targets)) mats[k].color.lerp(targets[k], 0.07);
+
+  // hero auto-spin fades out as you scroll into the story
+  const heroWeight = Math.max(0, 1 - scrollP / 0.12);
+  const autoSpin = reduceMotion ? 0 : t * 0.28 * heroWeight;
+  const wobble = reduceMotion ? 0 : Math.sin(t * 0.6) * 0.05;
+
+  shoe.position.x += (s.x - shoe.position.x) * 0.08;
+  shoe.position.y = 0.35 + s.lift + (reduceMotion ? 0 : Math.sin(t * 1.1) * 0.045);
+  shoe.rotation.y += (s.rotY + autoSpin + wobble + pointer.x * 0.18 - shoe.rotation.y) * 0.07;
+  shoe.rotation.x += (s.rotX + pointer.y * 0.08 - shoe.rotation.x) * 0.07;
+
+  ground.position.y = s.lift - 0.02; // keep the floor under the shoe
+
+  // pull back on narrow screens so the shoe fits the viewport width
+  const fit = Math.max(1, 0.95 / camera.aspect);
+  camera.position.y += (s.camY - camera.position.y) * 0.06;
+  camera.position.z += (s.camZ * fit - camera.position.z) * 0.06;
+  camera.lookAt(shoe.position.x * 0.6, 0.75, 0);
+
+  renderer.render(scene, camera);
+}
+tick();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  readScroll();
+});
+
+// ------------------------------------------------------------------ reveal on scroll
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) e.target.classList.add('visible');
+}, { threshold: 0.18 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
