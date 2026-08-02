@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College OS — Ad Studio</title>
+<meta name="description" content="Generate high-quality video ads for College OS.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14100A;
+    --panel: #1D1710;
+    --panel-2: #251E15;
+    --line: rgba(201,185,154,0.16);
+    --line-strong: rgba(201,185,154,0.32);
+    --text: #F2EAdd;
+    --text-dim: #A8988040;
+    --muted: #A89880;
+    --accent: #D8B981;
+    --accent-2: #C9835A;
+    --good: #7FB08A;
+    --bad: #E0705E;
+    --radius: 12px;
+    --rail: 306px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,185,154,0.22); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(201,185,154,0.4); }
+
+  /* ---------- shell ---------- */
+  .app { display: grid; grid-template-rows: 54px 1fr; height: 100%; }
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 16px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #221B13, #1A150E);
+  }
+  .brand {
+    font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600;
+    letter-spacing: 0.2px; white-space: nowrap;
+  }
+  .brand span { color: var(--accent); }
+  .brand small {
+    font-family: 'DM Sans', sans-serif; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted); margin-left: 8px; font-weight: 500;
+  }
+  .topbar .spacer { flex: 1; }
+  .top-stat { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .top-stat b { color: var(--text); font-weight: 500; }
+
+  .main {
+    display: grid; grid-template-columns: var(--rail) 1fr var(--rail);
+    min-height: 0; height: 100%;
+  }
+  .rail {
+    background: var(--panel); border-right: 1px solid var(--line);
+    overflow-y: auto; overflow-x: hidden; padding-bottom: 32px;
+  }
+  .rail.right { border-right: 0; border-left: 1px solid var(--line); }
+  .stage {
+    display: grid; grid-template-rows: 1fr auto auto;
+    min-width: 0; min-height: 0; background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(216,185,129,0.07), transparent 70%), #100C07;
+  }
+
+  /* ---------- panels ---------- */
+  .panel { border-bottom: 1px solid var(--line); }
+  .panel-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 16px 11px; cursor: pointer; user-select: none;
+  }
+  .panel-head h3 {
+    font-size: 11px; font-weight: 500; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--accent); flex: 1;
+  }
+  .panel-head .chev { color: var(--muted); font-size: 11px; transition: transform .18s; }
+  .panel.collapsed .chev { transform: rotate(-90deg); }
+  .panel.collapsed .panel-body { display: none; }
+  .panel-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label {
+    font-size: 11px; color: var(--muted); letter-spacing: .5px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .field > label b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+  select, input[type=text], input[type=password], textarea {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 9px; padding: 9px 10px; outline: none; transition: border-color .15s;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+  select { appearance: none; background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+  textarea { resize: vertical; min-height: 62px; line-height: 1.45; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 3px;
+    background: var(--line-strong); border-radius: 3px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid #14100A;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    cursor: pointer; border: 2px solid #14100A;
+  }
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .seg { display: flex; gap: 4px; background: var(--panel-2); padding: 3px; border-radius: 10px; border: 1px solid var(--line); }
+  .seg button {
+    flex: 1; background: transparent; border: 0; border-radius: 7px; padding: 7px 4px;
+    font-size: 12px; color: var(--muted); cursor: pointer; transition: all .14s; white-space: nowrap;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed=true] { background: var(--accent); color: #201806; font-weight: 500; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 100px;
+    padding: 6px 11px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all .14s;
+  }
+  .chip:hover { border-color: var(--line-strong); color: var(--text); }
+  .chip[aria-pressed=true] { background: rgba(216,185,129,0.16); border-color: var(--accent); color: var(--accent); }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2); cursor: pointer; transition: all .15s; font-size: 13px;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--line-strong); background: #2C2418; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary {
+    background: linear-gradient(180deg, #E8CB96, #D0AC70); color: #221805;
+    border-color: transparent; font-weight: 500;
+  }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.07); }
+  .btn.ghost { background: transparent; }
+  .btn.sm { padding: 8px 10px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; }
+
+  /* ---------- stage ---------- */
+  .viewport {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 0; padding: 22px; position: relative;
+  }
+  .canvas-wrap {
+    position: relative; max-width: 100%; max-height: 100%;
+    box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(201,185,154,.14);
+    border-radius: 6px; overflow: hidden; background: #000;
+  }
+  #preview { display: block; max-width: 100%; max-height: 100%; }
+  .badge-format {
+    position: absolute; top: 10px; left: 10px; z-index: 3;
+    background: rgba(20,16,10,.72); backdrop-filter: blur(6px);
+    border: 1px solid var(--line); border-radius: 100px;
+    padding: 4px 11px; font-size: 11px; letter-spacing: .6px; color: var(--accent);
+  }
+  .stage-empty {
+    text-align: center; color: var(--muted); max-width: 340px; line-height: 1.7;
+  }
+  .stage-empty h2 { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: var(--text); margin-bottom: 10px; font-weight: 400; }
+
+  .transport {
+    display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+    border-top: 1px solid var(--line); background: var(--panel);
+  }
+  .play-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-strong);
+    background: var(--accent); color: #201806; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+    transition: transform .12s;
+  }
+  .play-btn:hover { transform: scale(1.06); }
+  .scrub { flex: 1; }
+  .tc { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .tc b { color: var(--text); font-weight: 500; }
+
+  /* ---------- timeline ---------- */
+  .timeline {
+    border-top: 1px solid var(--line); background: #171209;
+    padding: 10px 14px 14px; overflow-x: auto; max-height: 174px;
+  }
+  .timeline-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 9px;
+    font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted);
+  }
+  .track { display: flex; gap: 7px; align-items: stretch; min-height: 96px; }
+  .shot {
+    position: relative; flex-shrink: 0; width: 104px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel-2); overflow: hidden;
+    cursor: pointer; transition: border-color .14s, transform .14s;
+    display: flex; flex-direction: column;
+  }
+  .shot:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .shot[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .shot canvas { width: 100%; display: block; background: #0B0805; }
+  .shot .meta { padding: 5px 7px 6px; }
+  .shot .meta .b { font-size: 10px; color: var(--accent); letter-spacing: .6px; text-transform: uppercase; }
+  .shot .meta .d { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .shot .idx {
+    position: absolute; top: 4px; left: 5px; background: rgba(20,16,10,.8);
+    border-radius: 4px; font-size: 9px; padding: 1px 5px; color: var(--muted);
+  }
+  .add-shot {
+    flex-shrink: 0; width: 46px; border: 1px dashed var(--line-strong); border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 18px;
+  }
+  .add-shot:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- inspector ---------- */
+  .empty-note { padding: 22px 16px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+  .kv { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .kv b { color: var(--text); font-weight: 500; }
+  .divider { height: 1px; background: var(--line); margin: 2px 0; }
+
+  .progress {
+    height: 3px; background: var(--panel-2); border-radius: 3px; overflow: hidden;
+  }
+  .progress > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+
+  .toast-host {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none;
+  }
+  .toast {
+    background: #2A2115; border: 1px solid var(--line-strong); border-radius: 10px;
+    padding: 10px 16px; font-size: 13px; box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    animation: rise .25s ease; max-width: 460px;
+  }
+  .toast.err { border-color: var(--bad); color: #FFD9D2; }
+  .toast.ok { border-color: var(--good); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+  .loading {
+    position: fixed; inset: 0; background: var(--bg); z-index: 200;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  }
+  .loading h1 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 32px; }
+  .loading .bar { width: 220px; }
+  .loading.done { opacity: 0; pointer-events: none; transition: opacity .4s; }
+
+  .switch { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .switch input { appearance: none; width: 32px; height: 18px; border-radius: 10px; background: var(--panel-2);
+    border: 1px solid var(--line); position: relative; cursor: pointer; transition: background .15s; flex-shrink: 0; }
+  .switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--muted); transition: all .15s; }
+  .switch input:checked { background: rgba(216,185,129,.28); border-color: var(--accent); }
+  .switch input:checked::after { left: 16px; background: var(--accent); }
+
+  @media (max-width: 1180px) {
+    .main { grid-template-columns: 268px 1fr 268px; }
+    :root { --rail: 268px; }
+  }
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .app { grid-template-rows: 54px auto; height: auto; }
+    .main { grid-template-columns: 1fr; }
+    .rail, .rail.right { border: 0; border-top: 1px solid var(--line); }
+    .viewport { height: 62vh; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <h1>College <span style="color:#D8B981">OS</span> Ad Studio</h1>
+  <div class="progress bar"><i id="loadBar"></i></div>
+  <div class="hint" id="loadMsg">Loading brand assets…</div>
+</div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">🎬 College <span>OS</span><small>Ad Studio</small></div>
+    <div class="spacer"></div>
+    <div class="top-stat" id="topStat">No ad generated yet</div>
+  </header>
+
+  <div class="main">
+    <!-- ============ LEFT RAIL: THE BRIEF ============ -->
+    <aside class="rail" id="railLeft">
+      <section class="panel">
+        <div class="panel-head" data-toggle><h3>Brief</h3><span class="chev">▾</span></div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="angle">Angle <span class="hint" id="angleHint"></span></label>
+            <select id="angle"></select>
+          </div>
+          <div class="field">
+            <label for="arc">Structure</label>
+            <select id="arc"></select>
+            <div class="hint" id="arcHint"></div>
+          </div>
+          <div class="field">
+            <label for="duration">Length <b id="durationVal">22s</b></label>
+            <input type="range" id="duration" min="8" max="60" step="1" value="22">
+          </div>
+          <div class="field">
+            <label>Format</label>
+            <div class="seg" id="formatSeg"></div>
+          </div>
+          <div class="field">
+            <label>Feature screens to prioritise</label>
+            <div class="chips" id="featureChips"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head" data-toggle><h3>Look &amp; Sound</h3><span class="chev">▾</span></div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="grade">Colour grade</label>
+            <select id="grade"></select>
+          </div>
+          <div class="field">
+            <label for="music">Music</label>
+            <select id="music"></select>
+            <div class="hint" id="musicHint"></div>
+          </div>
+          <div class="field">
+            <label for="bpm">Tempo — cuts snap to this <b id="bpmVal">96 BPM</b></label>
+            <input type="range" id="bpm" min="60" max="140" step="2" value="96">
+          </div>
+          <div class="field">
+            <label for="grain">Film grain <b id="grainVal">0.35</b></label>
+            <input type="range" id="grain" min="0" max="1" step="0.05" value="0.35">
+          </div>
+          <div class="field">
+            <label for="vignette">Vignette <b id="vignetteVal">0.50</b></label>
+            <input type="range" id="vignette" min="0" max="1" step="0.05" value="0.5">
+          </div>
+          <div class="field">
+            <label for="leak">Light leak <b id="leakVal">0.22</b></label>
+            <input type="range" id="leak" min="0" max="1" step="0.05" value="0.22">
+          </div>
+          <label class="switch"><input type="checkbox" id="letterbox"> Letterbox bars</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head" data-toggle><h3>Generate</h3><span class="chev">▾</span></div>
+        <div class="panel-body">
+          <button class="btn primary" id="btnGenerate">✦ Generate ad</button>
+          <div class="btn-row">
+            <button class="btn sm" id="btnReroll" disabled>↻ New copy</button>
+            <button class="btn sm" id="btnVariant" disabled>⇄ New cut</button>
+          </div>
+          <div class="divider"></div>
+          <div class="field">
+            <label for="apiKey">Claude API key <span class="hint">optional</span></label>
+            <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+            <div class="hint">
+              Stored only in this browser. With a key, copy is written fresh by Claude
+              instead of assembled from the built-in banks.
+            </div>
+          </div>
+          <div class="field">
+            <label for="notes">Extra direction for Claude</label>
+            <textarea id="notes" placeholder="e.g. speak to first-year engineering students, mention the exam countdown by name"></textarea>
+          </div>
+          <button class="btn" id="btnClaude" disabled>✦ Write copy with Claude</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head" data-toggle><h3>Export</h3><span class="chev">▾</span></div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Resolution</label>
+            <div class="seg" id="qualitySeg"></div>
+          </div>
+          <div class="field">
+            <label>Frame rate</label>
+            <div class="seg" id="fpsSeg"></div>
+          </div>
+          <button class="btn primary" id="btnExportVideo" disabled>⬇ Export video</button>
+          <div class="progress"><i id="exportBar"></i></div>
+          <div class="hint" id="exportMsg">Renders in real time — leave this tab in front.</div>
+          <div class="divider"></div>
+          <div class="btn-row">
+            <button class="btn sm" id="btnStills" disabled>Stills .zip</button>
+            <button class="btn sm" id="btnAudio" disabled>Audio .wav</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn sm" id="btnScript" disabled>Script .txt</button>
+            <button class="btn sm" id="btnCaptions" disabled>Captions .vtt</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ============ CENTRE: PREVIEW ============ -->
+    <main class="stage">
+      <div class="viewport" id="viewport">
+        <div class="stage-empty" id="stageEmpty">
+          <h2>Write the brief, get the ad.</h2>
+          <p>Pick an angle and a structure on the left, then hit Generate. Every shot is
+             rendered live — nothing is pre-baked, so you can edit any of it before export.</p>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap" hidden>
+          <div class="badge-format" id="badgeFormat">9:16</div>
+          <canvas id="preview"></canvas>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="play-btn" id="btnPlay" title="Play / pause (space)">▶</button>
+        <input type="range" class="scrub" id="scrub" min="0" max="1000" value="0" step="1">
+        <div class="tc"><b id="tcNow">0:00.0</b> / <span id="tcTotal">0:00.0</span></div>
+        <label class="switch" title="Show platform UI safe areas">
+          <input type="checkbox" id="guides"> Safe areas
+        </label>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-head">
+          <span>Timeline</span>
+          <span id="shotCount" style="color:var(--accent)"></span>
+          <span style="flex:1"></span>
+          <span>Click a shot to edit it</span>
+        </div>
+        <div class="track" id="track"></div>
+      </div>
+    </main>
+
+    <!-- ============ RIGHT RAIL: SHOT INSPECTOR ============ -->
+    <aside class="rail right" id="railRight">
+      <section class="panel">
+        <div class="panel-head" data-toggle><h3>Shot inspector</h3><span class="chev">▾</span></div>
+        <div class="panel-body" id="inspector">
+          <div class="empty-note">Generate an ad, then select a shot in the timeline to
+            retime it, swap the camera move, change the on-screen copy, or replace the visual.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="toast-host" id="toasts"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
