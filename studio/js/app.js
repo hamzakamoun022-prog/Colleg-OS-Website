@@ -201,17 +201,26 @@ function buildControls() {
     $('musicHint').textContent = STYLES[state.brief.music].hint;
     savePrefs();
   });
-  $('notes').addEventListener('input', e => { state.brief.notes = e.target.value; });
-  $('notes').value = state.brief.notes || '';
+  // The Claude panel is optional — a build that omits it (no network access to
+  // api.anthropic.com) should still bring the rest of the studio up.
+  const notes = $('notes');
+  if (notes) {
+    notes.value = state.brief.notes || '';
+    notes.addEventListener('input', e => { state.brief.notes = e.target.value; });
+  }
 
-  const key = localStorage.getItem(KEY_KEY) || '';
-  $('apiKey').value = key;
-  $('btnClaude').disabled = !key;
-  $('apiKey').addEventListener('input', e => {
-    const v = e.target.value.trim();
-    try { localStorage.setItem(KEY_KEY, v); } catch { /* storage disabled */ }
-    $('btnClaude').disabled = !v;
-  });
+  const apiKey = $('apiKey');
+  const btnClaude = $('btnClaude');
+  if (apiKey && btnClaude) {
+    const key = localStorage.getItem(KEY_KEY) || '';
+    apiKey.value = key;
+    btnClaude.disabled = !key;
+    apiKey.addEventListener('input', e => {
+      const v = e.target.value.trim();
+      try { localStorage.setItem(KEY_KEY, v); } catch { /* storage disabled */ }
+      btnClaude.disabled = !v;
+    });
+  }
 
   // Collapsible panels
   document.querySelectorAll('[data-toggle]').forEach(h => {
@@ -623,7 +632,7 @@ function doGenerate() {
 }
 
 async function doClaude() {
-  const apiKey = $('apiKey').value.trim();
+  const apiKey = $('apiKey')?.value.trim();
   if (!apiKey) return toast('Add your Claude API key first.', 'err');
   setPlaying(false);
   const btn = $('btnClaude');
@@ -780,7 +789,7 @@ async function boot() {
 
   // Wiring
   $('btnGenerate').addEventListener('click', doGenerate);
-  $('btnClaude').addEventListener('click', doClaude);
+  $('btnClaude')?.addEventListener('click', doClaude);
   $('btnReroll').addEventListener('click', () => {
     if (!state.board) return;
     rerollCopy(state.board);

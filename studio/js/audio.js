@@ -12,6 +12,15 @@ import { rng, hashSeed } from './util.js';
 
 const midi = n => 440 * 2 ** ((n - 69) / 12);
 
+/**
+ * Web Audio throws outright on a negative schedule time, and events already in
+ * the past are just wasted work. Playing from a scrubbed position hits both:
+ * the score is scheduled relative to a start that may sit well before "now".
+ * Offline rendering keeps currentTime at 0, so this only filters true negatives
+ * there.
+ */
+const tooLate = (ctx, t) => !(t >= Math.max(0, ctx.currentTime));
+
 export const STYLES = {
   lofi: { label: 'Lo-fi Study', bpm: 84, hint: 'Warm keys, soft kick, vinyl air. Calm and studious.' },
   uplift: { label: 'Uplift', bpm: 96, hint: 'Piano arp and claps. Optimistic, good for offer beats.' },
@@ -46,6 +55,7 @@ function env(ctx, node, t, a, d, s, r, peak = 1, sustain = 0.6) {
 }
 
 function tone(ctx, out, { freq, t, dur, type = 'sine', gain = 0.2, detune = 0, attack = 0.01, release = 0.3 }) {
+  if (tooLate(ctx, t)) return;
   const o = ctx.createOscillator();
   o.type = type;
   o.frequency.setValueAtTime(freq, t);
@@ -57,6 +67,7 @@ function tone(ctx, out, { freq, t, dur, type = 'sine', gain = 0.2, detune = 0, a
 }
 
 function kick(ctx, out, t, gain = 0.9) {
+  if (tooLate(ctx, t)) return;
   const o = ctx.createOscillator();
   o.type = 'sine';
   o.frequency.setValueAtTime(150, t);
@@ -78,6 +89,7 @@ function noiseBuffer(ctx, seconds = 1) {
 }
 
 function hat(ctx, out, noise, t, gain = 0.12, dur = 0.045) {
+  if (tooLate(ctx, t)) return;
   const s = ctx.createBufferSource();
   s.buffer = noise;
   const f = ctx.createBiquadFilter();
@@ -91,6 +103,7 @@ function hat(ctx, out, noise, t, gain = 0.12, dur = 0.045) {
 }
 
 function clap(ctx, out, noise, t, gain = 0.3) {
+  if (tooLate(ctx, t)) return;
   for (let i = 0; i < 3; i++) {
     const s = ctx.createBufferSource();
     s.buffer = noise;
@@ -109,6 +122,7 @@ function clap(ctx, out, noise, t, gain = 0.3) {
 
 /** Rising filtered-noise sweep used on hard cuts. */
 function whoosh(ctx, out, noise, t, gain = 0.16, dur = 0.42, reverse = false) {
+  if (tooLate(ctx, t)) return;
   const s = ctx.createBufferSource();
   s.buffer = noise;
   const f = ctx.createBiquadFilter();
@@ -126,6 +140,7 @@ function whoosh(ctx, out, noise, t, gain = 0.16, dur = 0.42, reverse = false) {
 
 /** Low boom for the opening frame and the price reveal. */
 function impact(ctx, out, noise, t, gain = 0.5) {
+  if (tooLate(ctx, t)) return;
   const o = ctx.createOscillator();
   o.type = 'sine';
   o.frequency.setValueAtTime(90, t);
@@ -227,7 +242,9 @@ export function scheduleScore(ctx, destination, o = {}) {
     const g = ctx.createGain();
     g.gain.value = style === 'lofi' ? 0.012 : 0.008;
     s.connect(f); f.connect(g); g.connect(master);
-    s.start(t0); s.stop(t0 + duration + 0.5);
+    const bedStart = Math.max(0, t0, ctx.currentTime);
+    const bedEnd = t0 + duration + 0.5;
+    if (bedEnd > bedStart) { s.start(bedStart); s.stop(bedEnd); }
   }
 
   for (let b = 0; b < bars; b++) {
@@ -322,14 +339,11 @@ export class ScorePlayer {
     this.bus = bus;
 
     // Schedule the whole score, shifted so `offset` lands at "now".
+    // Shift the whole score back so `offset` lands on "now". Everything that
+    // falls before the current time is dropped by the voices themselves.
     const t0 = ctx.currentTime + 0.06 - offset;
     scheduleScore(ctx, bus, { ...opts, t0 });
     this.startedAt = ctx.currentTime;
-    // Anything scheduled in the past is simply skipped by the graph.
-    if (offset > 0) {
-      bus.gain.setValueAtTime(0, ctx.currentTime);
-      bus.gain.setValueAtTime(1, ctx.currentTime + 0.02);
-    }
     return t0;
   }
 
