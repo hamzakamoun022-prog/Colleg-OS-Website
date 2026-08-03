@@ -166,14 +166,33 @@ export function scheduleScore(ctx, destination, o = {}) {
   const cuts = o.cuts || [];
   const r = rng(hashSeed(`${o.seed || 1}:${style}`));
 
-  // Master chain: gentle compression-ish shaping via a lowpass + master gain.
+  // Master chain: warmth filter → compressor → makeup gain.
+  //
+  // Rendered flat the mix sits around −21 dBFS RMS, which is noticeably quieter
+  // than the −14 to −16 platforms normalise short-form video to. The compressor
+  // holds the impacts and kick down so the makeup gain can lift the whole bed
+  // without the peaks clipping.
   const master = ctx.createGain();
   master.gain.value = o.volume ?? 0.9;
+
   const warm = ctx.createBiquadFilter();
   warm.type = 'lowpass';
   warm.frequency.value = 12000;
+
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -20;
+  comp.knee.value = 14;
+  comp.ratio.value = 4;
+  comp.attack.value = 0.005;
+  comp.release.value = 0.18;
+
+  const makeup = ctx.createGain();
+  makeup.gain.value = 1.2;
+
   master.connect(warm);
-  warm.connect(destination);
+  warm.connect(comp);
+  comp.connect(makeup);
+  makeup.connect(destination);
 
   const noise = noiseBuffer(ctx, 2);
 

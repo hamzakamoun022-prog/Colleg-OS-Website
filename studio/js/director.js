@@ -33,45 +33,84 @@ const HOOKS = {
     "It's 11pm. The essay is due at *9am*. Again.",
     "Missing deadlines isn't a *discipline* problem. It's a *system* problem.",
     "Every semester starts organised. Then *week 4* happens.",
-    "The assignment didn't sneak up on you. You just had *nowhere to put it*.",
+    "The assignment didn't sneak up on you. You had *nowhere to put it*.",
+    "Three deadlines this week. You remember *one*.",
+    "You didn't forget. You were never *tracking* it.",
+    "The panic isn't the workload. It's *not knowing* the workload.",
   ],
   money: [
     "Broke by the *17th* of every month. Every month.",
     "Where did *$400* go? You genuinely don't know.",
     "You're not bad with money. You just *never wrote it down*.",
     "Student loan in. Student loan *gone*.",
+    "Checking your balance with *one eye closed*.",
+    "You can't budget what you never *measured*.",
+    "Rent, books, food — and *no idea* what's left.",
   ],
   chaos: [
     "Stop juggling *10 apps*.",
     "Notes here. Calendar there. Deadlines *nowhere*.",
     "Your entire degree is scattered across *five apps*.",
     "You don't need another app. You need *one system*.",
+    "Six tabs open and you still can't find *the thing*.",
+    "Downloading a *seventh* app will not fix this.",
+    "It's all written down. *Nowhere useful*.",
   ],
   burnout: [
     "You're not lazy. You're *running college with no system*.",
     "Exhausted, behind, and pretending it's fine.",
     "Nobody teaches you *how to run* college.",
     "Surviving the semester shouldn't take *everything you have*.",
+    "Busy all week. Finished *nothing*.",
+    "The tiredness isn't the work. It's *holding it all in your head*.",
   ],
   grades: [
     "My grades went up when I stopped *relying on memory*.",
     "Same brain. Same effort. *Completely different* semester.",
     "The students getting A's aren't smarter. They're *organised*.",
+    "I didn't study more. I just stopped *losing track*.",
+    "Your grades are a *systems* problem, not a smart problem.",
   ],
   aesthetic: [
     "The Notion setup that runs my *entire* degree.",
     "This is what an organised semester actually *looks like*.",
     "One workspace. Every class, every deadline, every dollar.",
+    "I rebuilt my whole college life in *one* Notion page.",
+    "Setting this up took *20 minutes*. It saved my semester.",
   ],
 };
 
 const AGITATE = {
-  deadlines: ["Nothing talks to anything.", "So things slip. Quietly."],
-  money:     ["No budget. No tracking. Just vibes.", "And then the account is empty."],
-  chaos:     ["Nothing syncs. Nothing reminds you.", "So you forget. Constantly."],
-  burnout:   ["No system means every week starts from zero.", "That's the exhaustion."],
-  grades:    ["Effort without structure just burns you out.", "You can work less and score higher."],
-  aesthetic: ["Most templates look pretty and do nothing.", "This one actually runs."],
+  deadlines: [
+    "Nothing talks to anything.",
+    "So things slip. Quietly.",
+    "And you find out too late.",
+  ],
+  money: [
+    "No budget. No tracking. Just vibes.",
+    "And then the account is empty.",
+    "Every month, the same surprise.",
+  ],
+  chaos: [
+    "Nothing syncs. Nothing reminds you.",
+    "So you forget. Constantly.",
+    "The system is you remembering. That's the problem.",
+  ],
+  burnout: [
+    "No system means every week starts from zero.",
+    "That's the exhaustion.",
+    "You're not behind. You're unsupported.",
+  ],
+  grades: [
+    "Effort without structure just burns you out.",
+    "You can work less and score higher.",
+    "Structure beats cramming. Every time.",
+  ],
+  aesthetic: [
+    "Most templates look pretty and do nothing.",
+    "This one actually runs.",
+    "Built to be used, not admired.",
+  ],
 };
 
 const REVEALS = [
@@ -80,6 +119,7 @@ const REVEALS = [
   "This is *College OS*.",
   "*College OS* fixes it in one place.",
   "One workspace. *Everything* in it.",
+  "Then I found *College OS*.",
 ];
 
 /** Feature beats — each maps to a real page in the product. */
@@ -133,16 +173,13 @@ const FEATURES = [
   },
 ];
 
-const PROOF_LINES = [
-  "Loved by students who were *drowning* three weeks ago.",
-  "★★★★★ — and they're not paid reviews.",
-];
-
 const OFFERS = [
   "*$19.* Once. Forever.",
   "One payment. *No subscription*. Ever.",
   "Costs less than *one* takeaway.",
   "*$19* for the rest of your degree.",
+  "Cheaper than the coffee you'll buy cramming.",
+  "Pay once. Use it every semester.",
 ];
 
 const CTAS = [
@@ -150,12 +187,14 @@ const CTAS = [
   "Fix your semester — $19",
   "Start your best semester",
   "Grab it at getcollegeos.com",
+  "Set it up tonight — $19",
 ];
 
 const END_TAGS = [
   "Your most organised semester starts today.",
   "Your entire college life. One workspace.",
   "Stop juggling. Start running it.",
+  "One system. Every semester.",
 ];
 
 /* ------------------------------------------------------------------ */

@@ -449,6 +449,17 @@ function renderInspector() {
   host.appendChild(el('div', { class: 'field' }, amtLabel, amt));
 
   // --- timing ---
+  const wash = el('input', { type: 'range', min: '0', max: '0.85', step: '0.01', value: String(s.wash ?? 0) });
+  const washLabel = el('label', {}, 'Footage wash ', el('b', {}, (s.wash ?? 0).toFixed(2)));
+  wash.addEventListener('input', () => {
+    s.wash = +wash.value;
+    washLabel.querySelector('b').textContent = (+wash.value).toFixed(2);
+    if (!state.playing) renderPreview();
+  });
+  wash.addEventListener('change', () => commit());
+  host.appendChild(el('div', { class: 'field' }, washLabel, wash,
+    el('div', { class: 'hint' }, 'Pushes the footage back so a headline over it stays readable.')));
+
   const dur = el('input', { type: 'range', min: '0.6', max: '10', step: '0.05', value: String(s.dur) });
   const durLabel = el('label', {}, 'Duration ', el('b', {}, `${s.dur.toFixed(2)}s`));
   dur.addEventListener('input', () => {
