@@ -98,7 +98,9 @@ export function mixHex(a, b, t) {
 
 /** Rounded rectangle path (kept explicit — roundRect support varies by engine). */
 export function roundRect(ctx, x, y, w, h, r) {
-  const rad = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  // Never let a squeezed layout produce a negative radius — canvas throws on it,
+  // which would take down the whole frame for one mis-sized box.
+  const rad = Math.max(0, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
   ctx.beginPath();
   ctx.moveTo(x + rad, y);
   ctx.lineTo(x + w - rad, y);

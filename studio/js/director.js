@@ -287,7 +287,7 @@ const BUILDERS = {
     wash: 0.18,
     motion: pick(MOTION_POOL.agitate, r),
     motionAmount: 1.1,
-    text: [textBlock(ctx.copy.agitate, { pos: 'bottom', size: 0.055, anim: 'stagger', scrim: 0.92, family: 'body', weight: 500 })],
+    text: [textBlock(ctx.copy.agitate, { pos: 'bottom', size: 0.055, anim: 'stagger', scrim: 0.92, family: 'body', weight: 500, maxLines: 2 })],
   }),
 
   contrast: (ctx, r) => ({
@@ -302,7 +302,7 @@ const BUILDERS = {
     layerOpts: { shot: 'homepage', scroll: 0.14 },
     motion: pick(MOTION_POOL.reveal, r),
     motionAmount: 0.7,
-    text: [textBlock(ctx.copy.reveal, { pos: 'bottom', size: 0.07, anim: 'mask', scrim: 0.94 })],
+    text: [textBlock(ctx.copy.reveal, { pos: 'bottom', size: 0.07, anim: 'mask', scrim: 0.94, maxLines: 2 })],
   }),
 
   feature: (ctx, r) => {
@@ -315,7 +315,7 @@ const BUILDERS = {
       motionAmount: 0.55,
       text: [textBlock(f.line, {
         pos: 'bottom', size: 0.058, anim: pick(['stagger', 'mask'], r),
-        scrim: 0.94, family: 'body', weight: 500,
+        scrim: 0.94, family: 'body', weight: 500, maxLines: 2,
       })],
     };
   },

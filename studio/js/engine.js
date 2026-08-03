@@ -86,7 +86,7 @@ function drawTextBlock(ctx, W, H, block, p, o) {
   const pos = block.pos || 'center';
   if (pos === 'top') top = H * 0.13;
   else if (pos === 'lower') top = H * 0.72 - totalH / 2;
-  else if (pos === 'bottom') top = H * 0.86 - totalH;
+  else if (pos === 'bottom') top = H * 0.90 - totalH;
   else if (typeof pos === 'number') top = H * pos - totalH / 2;
   else top = H * 0.5 - totalH / 2;
   top += (block.offsetY || 0) * H;
@@ -94,7 +94,7 @@ function drawTextBlock(ctx, W, H, block, p, o) {
   // Scrim keeps copy legible over busy footage. Held flat across the text band
   // and feathered only at the edges, so the copy never sits on a gradient.
   if (block.scrim) {
-    const pad = size * 1.5;
+    const pad = size * 0.9;
     const a = block.scrim === true ? 0.9 : block.scrim;
     const c = o.tone === 'dark' ? P.ink : P.cream;
     const g = ctx.createLinearGradient(0, top - pad, 0, top + totalH + pad);
@@ -148,22 +148,35 @@ function drawTextBlock(ctx, W, H, block, p, o) {
       ctx.translate(-(x0 + lw / 2), -(y - size * 0.32));
     }
 
-    // Highlight sweep behind emphasised words.
+    // Highlight sweep behind emphasised words. Consecutive marked words share a
+    // single sweep — drawing one box per word leaves gaps at every space and
+    // reads as a mistake rather than a highlighter.
     if (marks.length && block.highlight !== false) {
-      let cx = x0, ci = charCursor;
-      for (const word of line.split(' ')) {
-        const ww = ctx.measureText(word).width;
-        if (isMarked(marks, ci)) {
-          const hp = ease.outQuart(clamp((lp - 0.25) / 0.5));
-          if (hp > 0) {
-            ctx.save();
-            ctx.globalAlpha *= 0.24;
-            fillRound(ctx, cx - size * 0.08, y - size * 0.66, (ww + size * 0.16) * hp, size * 0.84, size * 0.12, accent);
-            ctx.restore();
+      const hp = ease.outQuart(clamp((lp - 0.25) / 0.5));
+      if (hp > 0) {
+        const space = ctx.measureText(' ').width;
+        const runs = [];
+        let cx = x0, ci = charCursor, start = null, end = 0;
+        for (const word of line.split(' ')) {
+          const ww = ctx.measureText(word).width;
+          if (isMarked(marks, ci)) {
+            if (start === null) start = cx;
+            end = cx + ww;
+          } else if (start !== null) {
+            runs.push([start, end]); start = null;
           }
+          cx += ww + space;
+          ci += word.length + 1;
         }
-        cx += ww + ctx.measureText(' ').width;
-        ci += word.length + 1;
+        if (start !== null) runs.push([start, end]);
+
+        ctx.save();
+        ctx.globalAlpha *= 0.24;
+        for (const [a, b] of runs) {
+          fillRound(ctx, a - size * 0.08, y - size * 0.66,
+            (b - a + size * 0.16) * hp, size * 0.84, size * 0.12, accent);
+        }
+        ctx.restore();
       }
     }
 
@@ -228,7 +241,7 @@ function drawKicker(ctx, W, H, text, p, o, block = {}) {
   ctx.textBaseline = 'middle';
   const label = String(text).toUpperCase();
   const w = ctx.measureText(label).width;
-  const y = H * (block.y ?? 0.115);
+  const y = H * (block.y ?? 0.075);
   ctx.globalAlpha = inP * (1 - clamp((p - 0.9) / 0.1));
   const pillW = (w + size * 2.2) * lerp(0.7, 1, inP);
   fillRound(ctx, W / 2 - pillW / 2, y - size * 1.05, pillW, size * 2.1, size * 1.05,

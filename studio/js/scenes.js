@@ -94,11 +94,25 @@ export function window_(ctx, x, y, w, h, o = {}) {
  * bottom for the caption and a kicker pill up top.
  */
 export function pageFrame(ctx, W, H, o = {}) {
-  const vertical = H / W > 1.1;
-  const w = W * (vertical ? 0.84 : 0.68);
-  const h = vertical ? Math.min(H * 0.60, w * 1.3) : H * 0.7;
+  // The kicker pill and the bottom caption are drawn by the engine in frame
+  // space, but this window lives in the plate and therefore grows with the
+  // camera. Sizing it to a band that already excludes both zones — with headroom
+  // for the zoom — is what keeps a push-in from shoving the window chrome under
+  // the kicker.
+  const ratio = H / W;
+  const shape = ratio > 1.1 ? 'tall' : ratio > 0.9 ? 'square' : 'wide';
+  const spec = {
+    tall:   { w: 0.82, maxH: 0.53, aspect: 1.25, top: 0.155, bottom: 0.760 },
+    square: { w: 0.80, maxH: 0.60, aspect: 0.82, top: 0.200, bottom: 0.700 },
+    wide:   { w: 0.66, maxH: 0.62, aspect: 0.62, top: 0.190, bottom: 0.700 },
+  }[shape];
+
+  const w = W * spec.w;
+  const bandTop = H * spec.top;
+  const bandBottom = H * spec.bottom;
+  const h = Math.min(H * spec.maxH, w * spec.aspect, bandBottom - bandTop);
   const x = (W - w) / 2;
-  const y = (H - h) / 2 + ((o.offsetY ?? (vertical ? -0.05 : 0)) * H);
+  const y = bandTop + (bandBottom - bandTop - h) / 2 + ((o.offsetY ?? 0) * H);
   return window_(ctx, x, y, w, h, o);
 }
 
@@ -315,11 +329,19 @@ function examCountdown(ctx, W, H, p, o) {
   const r = pageFrame(ctx, W, H, { title: 'Exam Countdown — College OS' });
   let y = pageTitle(ctx, r, 'Exam Countdown', '⏳', clamp(p * 8));
 
+  // On a wide window the numeral and the exam list sit side by side; stacking
+  // them would shrink the hero number to nothing and squash the rows flat.
+  const avail = r.y + r.h - y;
+  const wide = r.w / avail > 1.5;
+  const numCol = wide ? r.w * 0.44 : r.w;
+  const listX = wide ? r.x + r.w * 0.50 : r.x;
+  const listW = wide ? r.w * 0.50 : r.w;
+
   // Hero number flips 15 → 14 to prove the formula updates itself.
   const flip = win(p, 0.45, 0.62);
-  const numSize = r.w * 0.30;
-  const cxp = r.x + r.w / 2;
-  const numY = y + numSize * 0.82;
+  const numSize = Math.min(numCol * (wide ? 0.62 : 0.30), avail * (wide ? 0.66 : 0.42));
+  const cxp = r.x + numCol / 2;
+  const numY = wide ? y + avail * 0.52 : y + numSize * 0.82;
 
   ctx.save();
   ctx.textAlign = 'center';
@@ -343,36 +365,40 @@ function examCountdown(ctx, W, H, p, o) {
     drawNum('15', -numSize * 0.55 * e, 1 - e, 1);
     drawNum('14', numSize * 0.55 * (1 - e), e, 1);
   }
-  ctx.font = font(500, r.w * 0.036);
+  const labelSize = Math.min(numCol * 0.052, avail * 0.075);
+  ctx.font = font(500, labelSize);
   ctx.fillStyle = P.brown;
-  ctx.letterSpacing = `${r.w * 0.006}px`;
+  ctx.letterSpacing = `${labelSize * 0.16}px`;
   ctx.fillText('DAYS UNTIL BIOLOGY FINAL', cxp, numY + numSize * 0.30);
   ctx.letterSpacing = '0px';
   ctx.restore();
 
-  // Upcoming exam rows below.
-  let ry = numY + numSize * 0.52;
+  // Upcoming exams — beside the numeral when wide, beneath it when tall.
+  let ry = wide ? y : numY + numSize * 0.52;
   const rows = [
     ['Biology Final', '14 days', P.red],
     ['Statistics Midterm', '21 days', P.amber],
     ['History Essay Exam', '30 days', P.green],
   ];
-  const rowH = Math.min((r.y + r.h - ry) / 3.4, r.h * 0.13);
+  const rowH = Math.min((r.y + r.h - ry) / 3.4, listW * 0.16);
+  const rs = Math.min(rowH * 0.36, listW * 0.06);
+  if (wide) ry += ((r.y + r.h - ry) - rowH * 3.3) / 2;
   rows.forEach((row, i) => {
     const a = ease.outCubic(stagger(p, i, 3, 0.4, 0.25));
     if (a <= 0) return;
     ctx.save();
     ctx.globalAlpha = a;
     ctx.translate(0, lerp(rowH * 0.4, 0, a));
-    fillRound(ctx, r.x, ry + i * rowH * 1.15, r.w, rowH, rowH * 0.22, rgba(P.beige, 0.8));
-    ctx.font = font(400, rowH * 0.36);
+    fillRound(ctx, listX, ry + i * rowH * 1.15, listW, rowH, rowH * 0.22, rgba(P.beige, 0.8));
+    ctx.font = font(400, rs);
     ctx.fillStyle = P.text;
     ctx.textBaseline = 'middle';
-    ctx.fillText(row[0], r.x + rowH * 0.4, ry + i * rowH * 1.15 + rowH * 0.5);
-    const th = rowH * 0.52;
+    ctx.fillText(row[0], listX + rowH * 0.4, ry + i * rowH * 1.15 + rowH * 0.5);
+    const th = Math.min(rowH * 0.52, rs * 1.55);
     ctx.textAlign = 'left';
+    ctx.font = font(500, th * 0.55);
     const tw = ctx.measureText(row[1]).width;
-    tag(ctx, r.x + r.w - tw - th * 1.5, ry + i * rowH * 1.15 + (rowH - th) / 2, row[1], row[2], th);
+    tag(ctx, listX + listW - tw - th * 1.1, ry + i * rowH * 1.15 + (rowH - th) / 2, row[1], row[2], th);
     ctx.restore();
   });
 }
@@ -679,10 +705,13 @@ function dashboardHub(ctx, W, H, p, o) {
     ['🌱', 'Wellbeing', 'Day 12', P.brown],
   ];
   const gapX = r.w * 0.03;
-  const cols = 2;
-  const tw = (r.w - gapX * (cols - 1)) / cols;
   const availH = r.y + r.h - y;
-  const th = Math.min(availH / 3 - gapX * 0.7, tw * 0.62);
+  // Three across on a wide window, two on a tall one — otherwise the tiles end
+  // up as long thin slabs with the label stranded in a sea of white.
+  const cols = r.w / availH > 1.5 ? 3 : 2;
+  const rows = Math.ceil(tiles.length / cols);
+  const tw = (r.w - gapX * (cols - 1)) / cols;
+  const th = Math.min(availH / rows - gapX * 0.7, tw * 0.62);
 
   tiles.forEach((t, i) => {
     const a = ease.outBack(stagger(p, i, tiles.length, 0.6, 0.12));
