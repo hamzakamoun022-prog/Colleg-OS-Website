@@ -743,6 +743,394 @@ function dashboardHub(ctx, W, H, p, o) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Desk / hardware                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A MacBook, drawn to the real machine's proportions.
+ *
+ * The lid is 1.55:1 including bezels (16:10 display inside), and the deck is
+ * foreshortened into a trapezoid because we're looking slightly down at it —
+ * that shallow angle is most of what separates "a laptop" from "a rectangle".
+ *
+ * @param {number} lw  lid width; everything else derives from it
+ * @returns {{screen:{x,y,w,h}, bottom:number}}
+ */
+function macbook(ctx, cx, topY, lw, o = {}) {
+  const lh = lw / 1.55;
+  const lx = cx - lw / 2;
+  const alu = o.dark ? '#3A3D42' : '#C8CBD0';
+  const aluDark = o.dark ? '#26282C' : '#A7ABB2';
+  const r = lw * 0.022;
+
+  // --- lid ---
+  withShadow(ctx, rgba('#000000', 0.34), lh * 0.16, lh * 0.06, () => {
+    fillRound(ctx, lx, topY, lw, lh, r, alu);
+  });
+  // Aluminium has a vertical falloff rather than a flat fill.
+  const alug = ctx.createLinearGradient(lx, topY, lx + lw, topY + lh);
+  alug.addColorStop(0, rgba('#FFFFFF', 0.22));
+  alug.addColorStop(0.5, rgba('#FFFFFF', 0));
+  alug.addColorStop(1, rgba('#000000', 0.10));
+  ctx.save();
+  roundRect(ctx, lx, topY, lw, lh, r);
+  ctx.clip();
+  ctx.fillStyle = alug;
+  ctx.fillRect(lx, topY, lw, lh);
+  ctx.restore();
+
+  // --- screen ---
+  const bez = lw * 0.012;
+  const sx = lx + bez;
+  const sy = topY + bez;
+  const sw = lw - bez * 2;
+  const sh = lh - bez * 2 - lw * 0.014; // slightly deeper chin
+  fillRound(ctx, sx - bez * 0.3, sy - bez * 0.3, sw + bez * 0.6, sh + bez * 0.6, r * 0.6, '#0B0B0D');
+
+  ctx.save();
+  roundRect(ctx, sx, sy, sw, sh, r * 0.45);
+  ctx.clip();
+  ctx.fillStyle = P.white;
+  ctx.fillRect(sx, sy, sw, sh);
+  if (o.img) {
+    const ir = o.img.width / o.img.height;
+    const dw = sw;
+    const dh = dw / ir;
+    const scroll = (o.scroll ?? 0) * Math.max(0, dh - sh);
+    ctx.drawImage(o.img, sx, sy - scroll, dw, dh);
+  }
+  // Screen glass: a soft diagonal sheen plus a darker top-left corner.
+  const gl = ctx.createLinearGradient(sx, sy, sx + sw * 0.85, sy + sh);
+  gl.addColorStop(0, 'rgba(255,255,255,0.20)');
+  gl.addColorStop(0.35, 'rgba(255,255,255,0.04)');
+  gl.addColorStop(0.55, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(sx, sy, sw, sh);
+  ctx.restore();
+
+  // --- notch ---
+  const nw = lw * 0.105;
+  const nh = bez * 1.5;
+  fillRound(ctx, cx - nw / 2, topY + bez * 0.2, nw, nh, nh * 0.35, '#0B0B0D');
+
+  // --- hinge + deck ---
+  const hingeY = topY + lh;
+  const hingeH = lw * 0.009;
+  fillRound(ctx, lx + lw * 0.02, hingeY, lw * 0.96, hingeH, hingeH * 0.4, aluDark);
+
+  // The deck is a trapezoid: the front edge is nearer the camera, so wider.
+  const deckY = hingeY + hingeH;
+  const deckH = lh * 0.30;
+  const backW = lw;
+  const frontW = lw * 1.055;
+  const bl = cx - backW / 2, br = cx + backW / 2;
+  const fl = cx - frontW / 2, fr = cx + frontW / 2;
+
+  withShadow(ctx, rgba('#000000', 0.32), deckH * 0.5, deckH * 0.22, () => {
+    ctx.beginPath();
+    ctx.moveTo(bl, deckY);
+    ctx.lineTo(br, deckY);
+    ctx.lineTo(fr, deckY + deckH);
+    ctx.lineTo(fl, deckY + deckH);
+    ctx.closePath();
+    ctx.fillStyle = alu;
+    ctx.fill();
+  });
+  const deckg = ctx.createLinearGradient(0, deckY, 0, deckY + deckH);
+  deckg.addColorStop(0, rgba('#000000', 0.16));
+  deckg.addColorStop(0.35, rgba('#FFFFFF', 0.10));
+  deckg.addColorStop(1, rgba('#000000', 0.06));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bl, deckY); ctx.lineTo(br, deckY);
+  ctx.lineTo(fr, deckY + deckH); ctx.lineTo(fl, deckY + deckH);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = deckg;
+  ctx.fillRect(fl, deckY, frontW, deckH);
+
+  // Keyboard. Six rows including the short function row and a bottom row built
+  // around the space bar; each row widens toward the front with the perspective.
+  // Keys read as wide and short here because we're looking down the deck — the
+  // thing to get right is the gap, which is what makes a grid read as keys
+  // rather than as stripes.
+  const rowCounts = [13, 14, 14, 13, 12];
+  const rows = rowCounts.length + 1;
+  const kbTop = deckY + deckH * 0.09;
+  const kbH = deckH * 0.56;
+  const rowH = kbH / rows;
+  const keyFill = 'rgba(20,22,25,0.92)';
+
+  const rowGeom = row => {
+    const yA = kbTop + rowH * row;
+    const depth = (yA - deckY) / deckH;
+    return { yA, h: rowH * (row === 0 ? 0.52 : 0.78), w: lerp(backW, frontW, depth) * 0.87 };
+  };
+
+  rowCounts.forEach((keys, row) => {
+    const { yA, h, w } = rowGeom(row);
+    const gap = w * 0.011;
+    const kw = (w - gap * (keys - 1)) / keys;
+    for (let k = 0; k < keys; k++) {
+      const x = cx - w / 2 + k * (kw + gap);
+      fillRound(ctx, x, yA, kw, h, Math.max(0.5, kw * 0.11), keyFill);
+      fillRound(ctx, x, yA, kw, h * 0.3, Math.max(0.5, kw * 0.11), 'rgba(255,255,255,0.045)');
+    }
+  });
+
+  // Bottom row: modifiers either side of the space bar.
+  {
+    const { yA, h, w } = rowGeom(rowCounts.length);
+    const gap = w * 0.011;
+    const spaceW = w * 0.36;
+    const modW = (w - spaceW - gap * 6) / 6;
+    let x = cx - w / 2;
+    for (let k = 0; k < 7; k++) {
+      const kw = k === 3 ? spaceW : modW;
+      fillRound(ctx, x, yA, kw, h, Math.max(0.5, modW * 0.11), keyFill);
+      fillRound(ctx, x, yA, kw, h * 0.3, Math.max(0.5, modW * 0.11), 'rgba(255,255,255,0.045)');
+      x += kw + gap;
+    }
+  }
+
+  // Trackpad
+  const tpW = frontW * 0.30;
+  const tpH = deckH * 0.22;
+  const tpY = kbTop + kbH + deckH * 0.06;
+  fillRound(ctx, cx - tpW / 2, tpY, tpW, tpH, tpH * 0.14, rgba('#FFFFFF', 0.05));
+  strokeRound(ctx, cx - tpW / 2, tpY, tpW, tpH, tpH * 0.14, rgba('#000000', 0.18), Math.max(1, lw * 0.001));
+  ctx.restore();
+
+  // Front lip
+  fillRound(ctx, fl, deckY + deckH - lw * 0.004, frontW, lw * 0.008, lw * 0.004, aluDark);
+
+  return { screen: { x: sx, y: sy, w: sw, h: sh }, bottom: deckY + deckH };
+}
+
+/** Warm desk surface with softly blurred props, used behind the machine. */
+function deskScene(ctx, W, H, p, o = {}) {
+  const horizon = H * (o.horizon ?? 0.42);
+
+  // Wall
+  const wall = ctx.createLinearGradient(0, 0, 0, horizon);
+  wall.addColorStop(0, mixHex(P.beige, P.white, 0.35));
+  wall.addColorStop(1, P.beige);
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 0, W, horizon);
+
+  // Desk
+  const desk = ctx.createLinearGradient(0, horizon, 0, H);
+  desk.addColorStop(0, mixHex(P.warmTan, P.brown, 0.35));
+  desk.addColorStop(0.25, P.warmTan);
+  desk.addColorStop(1, mixHex(P.warmTan, P.beige, 0.55));
+  ctx.fillStyle = desk;
+  ctx.fillRect(0, horizon, W, H - horizon);
+
+  // Contact shadow along the wall/desk join
+  const join = ctx.createLinearGradient(0, horizon, 0, horizon + H * 0.05);
+  join.addColorStop(0, rgba(P.darkBrown, 0.28));
+  join.addColorStop(1, rgba(P.darkBrown, 0));
+  ctx.fillStyle = join;
+  ctx.fillRect(0, horizon, W, H * 0.05);
+
+  // Window light falling across the desk from the upper left
+  const light = ctx.createLinearGradient(0, 0, W * 0.9, H);
+  light.addColorStop(0, rgba('#FFE9C0', 0.42));
+  light.addColorStop(0.45, rgba('#FFE9C0', 0.06));
+  light.addColorStop(1, rgba('#FFE9C0', 0));
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, W, H);
+
+  // Props sit behind the machine and stay defocused, which is what sells the
+  // depth — a sharp coffee cup reads as a sticker.
+  const S = Math.min(W, H);
+  const vertical = H / W > 1.1;
+  ctx.save();
+  if (ctx.filter !== undefined) ctx.filter = `blur(${S * 0.008}px)`;
+  ctx.globalAlpha = 0.9;
+
+  // Mug, left. On a vertical crop the props move down into the near foreground
+  // and grow, so the lower third isn't bare desk.
+  const mx = W * (vertical ? 0.17 : 0.13);
+  const my = horizon + H * (vertical ? 0.34 : 0.055);
+  const mr = S * (vertical ? 0.085 : 0.055);
+  fillRound(ctx, mx - mr * 0.75, my - mr, mr * 1.5, mr * 1.5, mr * 0.16, P.white);
+  ctx.beginPath();
+  ctx.ellipse(mx + mr * 0.95, my - mr * 0.35, mr * 0.34, mr * 0.34, 0, -Math.PI / 2, Math.PI / 2);
+  ctx.strokeStyle = P.white;
+  ctx.lineWidth = mr * 0.17;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(mx, my - mr, mr * 0.75, mr * 0.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = mixHex(P.brown, P.darkBrown, 0.5);
+  ctx.fill();
+
+  // Notebook + pen, right
+  const nx = W * (vertical ? 0.82 : 0.84);
+  const ny = horizon + H * (vertical ? 0.38 : 0.10);
+  ctx.save();
+  ctx.translate(nx, ny);
+  ctx.rotate(-0.12);
+  const nS = vertical ? 1.5 : 1;
+  fillRound(ctx, -S * 0.10 * nS, -S * 0.06 * nS, S * 0.20 * nS, S * 0.13 * nS, S * 0.008, mixHex(P.cream, P.white, 0.4));
+  fillRound(ctx, -S * 0.10 * nS, -S * 0.06 * nS, S * 0.016 * nS, S * 0.13 * nS, S * 0.008, P.red);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(nx - S * 0.02, ny + S * 0.085);
+  ctx.rotate(0.22);
+  fillRound(ctx, -S * 0.07, 0, S * 0.14, S * 0.011, S * 0.006, P.darkBrown);
+  ctx.restore();
+
+  // Framed print on the wall. Without it the upper third of a vertical crop is
+  // an empty beige field, which reads as an unfinished render rather than a room.
+  const fw = S * (vertical ? 0.30 : 0.20);
+  const fh = fw * 1.28;
+  const fx = W * (vertical ? 0.64 : 0.74);
+  const fy = horizon - fh - S * (vertical ? 0.09 : 0.05);
+  if (fy > S * 0.03) {
+    ctx.save();
+    ctx.translate(fx, fy);
+    fillRound(ctx, -fw * 0.5 + S * 0.006, S * 0.008, fw, fh, S * 0.004, rgba(P.darkBrown, 0.13));
+    fillRound(ctx, -fw * 0.5, 0, fw, fh, S * 0.004, mixHex(P.cream, P.white, 0.55));
+    fillRound(ctx, -fw * 0.5 + fw * 0.10, fh * 0.09, fw * 0.80, fh * 0.82, S * 0.002, mixHex(P.beige, P.warmTan, 0.30));
+    fillRound(ctx, -fw * 0.5 + fw * 0.20, fh * 0.34, fw * 0.60, fh * 0.34, S * 0.002, mixHex(P.warmTan, P.brown, 0.28));
+    ctx.restore();
+  }
+
+  // Plant, far left on the wall line
+  const px = W * 0.05, py = horizon - S * 0.01;
+  fillRound(ctx, px - S * 0.035, py - S * 0.05, S * 0.07, S * 0.06, S * 0.01, mixHex(P.brown, P.warmTan, 0.4));
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i - 2.5) * 0.32;
+    ctx.save();
+    ctx.translate(px, py - S * 0.05);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.ellipse(0, -S * 0.045, S * 0.014, S * 0.045, 0, 0, Math.PI * 2);
+    ctx.fillStyle = mixHex('#6E7F6A', P.green, 0.4 + i * 0.06);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/** MacBook on a desk with the template open — the "in use" hero shot. */
+function macbookDesk(ctx, W, H, p, o) {
+  deskScene(ctx, W, H, p, o);
+  const vertical = H / W > 1.1;
+  const lw = W * (vertical ? 0.82 : 0.50);
+  const topY = H * (vertical ? 0.30 : 0.20);
+  const img = o.assets?.[o.shot || 'homepage'];
+
+  // Settle in with a slight rise, then a long slow scroll of the page.
+  const a = ease.outQuart(clamp(p * 2.4));
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(0, lerp(H * 0.02, 0, a));
+  const m = macbook(ctx, W / 2, topY, lw, {
+    img,
+    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.5),
+  });
+
+  // Screen glow spilling onto the deck below it
+  const glow = ctx.createLinearGradient(0, m.screen.y + m.screen.h, 0, m.bottom);
+  glow.addColorStop(0, rgba('#FFFFFF', 0.16));
+  glow.addColorStop(1, rgba('#FFFFFF', 0));
+  ctx.fillStyle = glow;
+  ctx.fillRect(W / 2 - lw * 0.6, m.screen.y + m.screen.h, lw * 1.2, m.bottom - (m.screen.y + m.screen.h));
+  ctx.restore();
+}
+
+/**
+ * Over-the-shoulder: someone at the desk, working in the template.
+ *
+ * The figure is a dark, heavily defocused foreground shape rather than a drawn
+ * person. At this blur radius a shoulder and the back of a head read as human,
+ * and there's no face to fall into the uncanny valley.
+ */
+function overShoulder(ctx, W, H, p, o) {
+  const vertical = H / W > 1.1;
+  deskScene(ctx, W, H, p, { horizon: vertical ? 0.30 : 0.36 });
+  const lw = W * (vertical ? 0.90 : 0.44);
+  const img = o.assets?.[o.shot || 'homepage'];
+
+  const a = ease.outQuart(clamp(p * 2.2));
+  ctx.save();
+  ctx.globalAlpha = a;
+  macbook(ctx, W * (vertical ? 0.53 : 0.55), H * (vertical ? 0.285 : 0.16), lw, {
+    img,
+    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.45),
+  });
+  ctx.restore();
+
+  // Foreground figure, lower left. The blur is deliberately moderate: too much
+  // and the head, neck and shoulder merge into one dark mass that reads as a
+  // smudge instead of a person. What sells it is the neck notch between head
+  // and shoulders plus the rim light — not detail.
+  // The head sits mostly below the frame edge, the way a real over-the-shoulder
+  // lens crops it, and the arm stays low and short — reaching up across the
+  // screen it stops reading as an arm and starts reading as a tentacle.
+  const S = Math.min(W, H);
+  const f = vertical
+    ? { x: W * 0.22, y: H * 0.845, r: S * 0.195 }
+    : { x: W * 0.14, y: H * 0.780, r: S * 0.230 };
+  const r = f.r;
+
+  const body = ctx.createLinearGradient(0, f.y - r * 1.2, 0, H);
+  body.addColorStop(0, '#3B2F24');
+  body.addColorStop(0.6, '#241C14');
+  body.addColorStop(1, '#15100B');
+
+  ctx.save();
+  if (ctx.filter !== undefined) ctx.filter = `blur(${S * 0.013}px)`;
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = body;
+  ctx.strokeStyle = body;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Head, neck and shoulders as one silhouette. No reaching arm: from behind
+  // the subject the arms are occluded by the torso and the machine, and every
+  // attempt to draw one in canvas reads as a loop of rope rather than a limb.
+  ctx.beginPath();
+  ctx.moveTo(f.x - r * 3.1, H * 1.14);
+  ctx.bezierCurveTo(f.x - r * 2.35, f.y + r * 1.02, f.x - r * 1.15, f.y + r * 0.82, f.x - r * 0.62, f.y + r * 0.58);
+  ctx.lineTo(f.x - r * 0.36, f.y + r * 0.40);
+  ctx.lineTo(f.x + r * 0.42, f.y + r * 0.40);
+  ctx.bezierCurveTo(f.x + r * 1.15, f.y + r * 0.70, f.x + r * 2.05, f.y + r * 1.24, f.x + r * 2.5, H * 1.14);
+  ctx.closePath();
+  ctx.fill();
+
+  // Head, tilted slightly toward the screen
+  ctx.beginPath();
+  ctx.ellipse(f.x, f.y, r * 0.72, r * 0.90, 0.13, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Rim light from the screen: a bright edge down the head and over the far
+  // shoulder. This is the single strongest cue that the shape is a body.
+  ctx.save();
+  if (ctx.filter !== undefined) ctx.filter = `blur(${S * 0.009}px)`;
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = '#FFE7BE';
+  ctx.lineCap = 'round';
+
+  ctx.globalAlpha = 0.32;
+  ctx.lineWidth = S * 0.008;
+  ctx.beginPath();
+  ctx.ellipse(f.x, f.y, r * 0.73, r * 0.91, 0.13, -Math.PI * 0.80, -Math.PI * 0.04);
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.18;
+  ctx.lineWidth = S * 0.009;
+  ctx.beginPath();
+  ctx.moveTo(f.x + r * 0.42, f.y + r * 0.48);
+  ctx.bezierCurveTo(f.x + r * 1.12, f.y + r * 0.78, f.x + r * 1.88, f.y + r * 1.30, f.x + r * 2.25, H * 1.05);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
 /* Problem / emotion scenes                                            */
 /* ------------------------------------------------------------------ */
 
@@ -1347,6 +1735,8 @@ export const SCENES = {
   testimonial:      { label: 'Testimonial',         group: 'Offer',   paint: testimonial },
   priceCard:        { label: 'Price Card',          group: 'Offer',   paint: priceCard },
   endCard:          { label: 'End Card / CTA',      group: 'Offer',   paint: endCard },
+  macbookDesk:      { label: 'MacBook on Desk',     group: 'Footage', paint: macbookDesk },
+  overShoulder:     { label: 'Over the Shoulder',   group: 'Footage', paint: overShoulder },
   laptopShot:       { label: 'Laptop Mockup',       group: 'Footage', paint: laptopShot },
   phoneShot:        { label: 'Phone Mockup',        group: 'Footage', paint: phoneShot },
   fullShot:         { label: 'Full-bleed Screen',   group: 'Footage', paint: fullShot },

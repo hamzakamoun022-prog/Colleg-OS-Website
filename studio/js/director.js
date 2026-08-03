@@ -336,13 +336,19 @@ const BUILDERS = {
     text: [],
   }),
 
-  reveal: (ctx, r) => ({
-    layer: pick(['dashboardHub', 'laptopShot'], r),
-    layerOpts: { shot: 'homepage', scroll: 0.14 },
-    motion: pick(MOTION_POOL.reveal, r),
-    motionAmount: 0.7,
-    text: [textBlock(ctx.copy.reveal, { pos: 'bottom', size: 0.07, anim: 'mask', scrim: 0.94, maxLines: 2 })],
-  }),
+  reveal: (ctx, r) => {
+    const layer = pick(['dashboardHub', 'laptopShot', 'macbookDesk', 'overShoulder'], r);
+    // The desk shots are composed for the full frame — a hard push-in crops the
+    // foreground figure and the props straight out of it.
+    const roomy = layer === 'macbookDesk' || layer === 'overShoulder';
+    return {
+      layer,
+      layerOpts: { shot: 'homepage', scroll: 0.14 },
+      motion: roomy ? pick(['float', 'pushIn', 'handheld'], r) : pick(MOTION_POOL.reveal, r),
+      motionAmount: roomy ? 0.32 : 0.7,
+      text: [textBlock(ctx.copy.reveal, { pos: 'bottom', size: 0.07, anim: 'mask', scrim: 0.94, maxLines: 2 })],
+    };
+  },
 
   feature: (ctx, r) => {
     const f = ctx.nextFeature();
