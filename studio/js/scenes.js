@@ -756,6 +756,247 @@ function dashboardHub(ctx, W, H, p, o) {
  * @param {number} lw  lid width; everything else derives from it
  * @returns {{screen:{x,y,w,h}, bottom:number}}
  */
+/**
+ * A MacBook, open, with the template on screen.
+ *
+ * The thing that decides whether a drawn laptop reads as a MacBook is the
+ * keyboard, and the mistake is drawing N equal keys per row. A real keyboard is
+ * built on a unit grid: a 1u letter key, a 1.5u tab, a 1.75u caps, a 2.25u
+ * shift, a 5u space bar, and an inverted-T arrow cluster with half-height up
+ * and down. Those landmarks are what the eye actually recognises — get them
+ * right and even a low-detail keyboard reads correctly; get them wrong and no
+ * amount of shading rescues it.
+ *
+ * Rows below are in units and each sums to 14.5, exactly like the real thing.
+ */
+const KB_ROWS = [
+  { h: 0.60, u: [1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },        // esc · F1–F12 · touch id
+  { h: 1, u: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5] },           // ` 1–0 - = · delete
+  { h: 1, u: [1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },           // tab · QWERTY…
+  { h: 1, u: [1.75, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75] },          // caps · ASDF… · return
+  { h: 1, u: [2.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.25] },             // shift · ZXCV… · shift
+  { h: 1, u: [1, 1, 1, 1.25, 5, 1.25, 1, 'arrows'] },                  // fn ctrl opt cmd · space
+];
+const KB_UNITS = 14.5;
+
+function macbook(ctx, cx, topY, lw, o = {}) {
+  const lh = lw / 1.55;
+  const lx = cx - lw / 2;
+  const alu = o.dark ? '#3A3D42' : '#C8CBD0';
+  const aluDark = o.dark ? '#26282C' : '#A7ABB2';
+  const r = lw * 0.022;
+
+  /* ---------------- lid ---------------- */
+  withShadow(ctx, rgba('#000000', 0.34), lh * 0.16, lh * 0.06, () => {
+    fillRound(ctx, lx, topY, lw, lh, r, alu);
+  });
+  const alug = ctx.createLinearGradient(lx, topY, lx + lw, topY + lh);
+  alug.addColorStop(0, rgba('#FFFFFF', 0.22));
+  alug.addColorStop(0.5, rgba('#FFFFFF', 0));
+  alug.addColorStop(1, rgba('#000000', 0.10));
+  ctx.save();
+  roundRect(ctx, lx, topY, lw, lh, r);
+  ctx.clip();
+  ctx.fillStyle = alug;
+  ctx.fillRect(lx, topY, lw, lh);
+  ctx.restore();
+
+  /* ---------------- screen ---------------- */
+  // The lid's front face is black glass edge to edge, with a hairline of
+  // aluminium around it. A silver frame instead reads as a picture frame.
+  const rim = lw * 0.007;
+  fillRound(ctx, lx + rim, topY + rim, lw - rim * 2, lh - rim * 2, r * 0.8, '#0C0D0F');
+
+  const bez = lw * 0.013;
+  const sx = lx + rim + bez;
+  const sy = topY + rim + bez;
+  const sw = lw - (rim + bez) * 2;
+  const sh = lh - (rim + bez) * 2 - lw * 0.010;
+
+  ctx.save();
+  roundRect(ctx, sx, sy, sw, sh, r * 0.3);
+  ctx.clip();
+  ctx.fillStyle = P.white;
+  ctx.fillRect(sx, sy, sw, sh);
+  if (o.img) {
+    const dw = sw;
+    const dh = dw / (o.img.width / o.img.height);
+    const scroll = (o.scroll ?? 0) * Math.max(0, dh - sh);
+    ctx.drawImage(o.img, sx, sy - scroll, dw, dh);
+  }
+  // Backlight: a lit screen is brighter at the centre than a flat paste-in.
+  const lit = ctx.createRadialGradient(sx + sw * 0.5, sy + sh * 0.45, 0,
+    sx + sw * 0.5, sy + sh * 0.45, Math.max(sw, sh) * 0.7);
+  lit.addColorStop(0, 'rgba(255,252,244,0.16)');
+  lit.addColorStop(1, 'rgba(255,252,244,0)');
+  ctx.fillStyle = lit;
+  ctx.fillRect(sx, sy, sw, sh);
+  // Glass sheen
+  const gl = ctx.createLinearGradient(sx, sy, sx + sw * 0.85, sy + sh);
+  gl.addColorStop(0, 'rgba(255,255,255,0.16)');
+  gl.addColorStop(0.35, 'rgba(255,255,255,0.03)');
+  gl.addColorStop(0.55, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(sx, sy, sw, sh);
+  ctx.restore();
+
+  // Notch
+  const nw = lw * 0.105;
+  const nh = bez * 1.35;
+  fillRound(ctx, cx - nw / 2, sy - nh * 0.02, nw, nh, nh * 0.35, '#0C0D0F');
+
+  /* ---------------- hinge + deck ---------------- */
+  const hingeY = topY + lh;
+  const hingeH = lw * 0.009;
+  fillRound(ctx, lx + lw * 0.02, hingeY, lw * 0.96, hingeH, hingeH * 0.4, aluDark);
+
+  // The deck is a trapezoid — the front edge is nearer the camera, so wider.
+  // Its depth is the viewing angle: the body is about as deep as the lid is
+  // tall, so half of that is a natural seated eye level and puts the keys at
+  // roughly 2:1, which is what they look like in a real photograph.
+  const deckY = hingeY + hingeH;
+  const deckH = lh * 0.56;
+  const backW = lw;
+  const frontW = lw * 1.055;
+  const bl = cx - backW / 2, br = cx + backW / 2;
+  const fl = cx - frontW / 2, fr = cx + frontW / 2;
+  const widthAt = depth => lerp(backW, frontW, depth);
+
+  withShadow(ctx, rgba('#000000', 0.32), deckH * 0.5, deckH * 0.22, () => {
+    ctx.beginPath();
+    ctx.moveTo(bl, deckY); ctx.lineTo(br, deckY);
+    ctx.lineTo(fr, deckY + deckH); ctx.lineTo(fl, deckY + deckH);
+    ctx.closePath();
+    ctx.fillStyle = alu;
+    ctx.fill();
+  });
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bl, deckY); ctx.lineTo(br, deckY);
+  ctx.lineTo(fr, deckY + deckH); ctx.lineTo(fl, deckY + deckH);
+  ctx.closePath();
+  ctx.clip();
+
+  const deckg = ctx.createLinearGradient(0, deckY, 0, deckY + deckH);
+  deckg.addColorStop(0, rgba('#000000', 0.18));
+  deckg.addColorStop(0.30, rgba('#FFFFFF', 0.11));
+  deckg.addColorStop(0.72, rgba('#FFFFFF', 0.05));
+  deckg.addColorStop(1, rgba('#000000', 0.05));
+  ctx.fillStyle = deckg;
+  ctx.fillRect(fl, deckY, frontW, deckH);
+
+  // Proportions taken off a 14" body: 6% margin, 52% keyboard, 5% gap,
+  // 30% trackpad, 7% front lip.
+  const kbTop = deckY + deckH * 0.06;
+  const kbH = deckH * 0.52;
+  const rowPitch = kbH / KB_ROWS.length;
+  const kbWidthFrac = 0.83;
+
+  // Key well: a hair proud of the keys, not a slab with a wide margin.
+  {
+    const dTop = (kbTop - deckY) / deckH;
+    const dBot = (kbTop + kbH - rowPitch * 0.13 - deckY) / deckH;
+    const wTop = widthAt(dTop) * kbWidthFrac, wBot = widthAt(dBot) * kbWidthFrac;
+    const pad = rowPitch * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(cx - wTop / 2 - pad, kbTop - pad);
+    ctx.lineTo(cx + wTop / 2 + pad, kbTop - pad);
+    ctx.lineTo(cx + wBot / 2 + pad, kbTop + kbH - rowPitch * 0.13 + pad);
+    ctx.lineTo(cx - wBot / 2 - pad, kbTop + kbH - rowPitch * 0.13 + pad);
+    ctx.closePath();
+    ctx.fillStyle = '#0A0C0E';
+    ctx.fill();
+  }
+
+  const keyFace = '#2E3238';
+  const drawKey = (x, y, w, h) => {
+    if (w <= 0 || h <= 0) return;
+    const rad = Math.max(0.4, Math.min(w, h) * 0.20);
+    fillRound(ctx, x, y, w, h, rad, keyFace);
+    fillRound(ctx, x, y, w, h * 0.40, rad, 'rgba(255,255,255,0.075)');
+  };
+
+  KB_ROWS.forEach((row, i) => {
+    const y = kbTop + rowPitch * i;
+    const depth = (y - deckY) / deckH;
+    const w = widthAt(depth) * kbWidthFrac;
+    const u = w / KB_UNITS;
+    const gap = u * 0.13;
+    const h = rowPitch * row.h - rowPitch * 0.13;
+    let x = cx - w / 2;
+    for (const unit of row.u) {
+      if (unit === 'arrows') {
+        // Inverted T: full-height left and right, half-height up over down.
+        const kw = u - gap;
+        drawKey(x, y, kw, h);
+        const hh = (h - rowPitch * 0.08) / 2;
+        drawKey(x + u, y, kw, hh);
+        drawKey(x + u, y + hh + rowPitch * 0.08, kw, hh);
+        drawKey(x + u * 2, y, kw, h);
+        x += u * 3;
+      } else {
+        drawKey(x, y, unit * u - gap, h);
+        x += unit * u;
+      }
+    }
+  });
+
+  // Speaker grilles flanking the keyboard — a Pro signature, and the thing
+  // that fills the dead aluminium either side of the keys.
+  {
+    const dMid = (kbTop + kbH * 0.5 - deckY) / deckH;
+    const w = widthAt(dMid);
+    const inner = w * kbWidthFrac * 0.5 + rowPitch * 0.5;
+    const outer = w * 0.5 - rowPitch * 0.35;
+    if (outer > inner) {
+      const gw = outer - inner;
+      for (const side of [-1, 1]) {
+        const gx = side < 0 ? cx - outer : cx + inner;
+        fillRound(ctx, gx, kbTop, gw, kbH, rowPitch * 0.20, rgba('#000000', 0.11));
+        // Perforations. Rows of fine dots is what the eye reads as a grille;
+        // a flat grey panel just reads as a smudge on the aluminium.
+        const step = Math.max(2.2, rowPitch * 0.26);
+        const dot = Math.max(0.5, step * 0.20);
+        ctx.fillStyle = rgba('#000000', 0.20);
+        for (let gy = kbTop + step; gy < kbTop + kbH - step * 0.5; gy += step) {
+          for (let dx = gx + step * 0.7; dx < gx + gw - step * 0.4; dx += step) {
+            ctx.beginPath();
+            ctx.arc(dx, gy, dot, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+  }
+
+  // Trackpad: 41% of the body width and nearly the deck's own colour. A pale
+  // fill turns it into a card lying on the laptop.
+  const tpTop = deckY + deckH * 0.63;
+  const tpH = deckH * 0.30;
+  const tpW = widthAt((tpTop - deckY) / deckH) * 0.41;
+  const tpR = tpH * 0.07;
+  const tpg = ctx.createLinearGradient(0, tpTop, 0, tpTop + tpH);
+  tpg.addColorStop(0, rgba('#000000', 0.075));
+  tpg.addColorStop(0.22, rgba('#000000', 0.012));
+  tpg.addColorStop(1, rgba('#FFFFFF', 0.018));
+  ctx.save();
+  roundRect(ctx, cx - tpW / 2, tpTop, tpW, tpH, tpR);
+  ctx.clip();
+  ctx.fillStyle = tpg;
+  ctx.fillRect(cx - tpW / 2, tpTop, tpW, tpH);
+  ctx.restore();
+  strokeRound(ctx, cx - tpW / 2, tpTop, tpW, tpH, tpR,
+    rgba('#000000', 0.17), Math.max(1, lw * 0.001));
+
+  ctx.restore();
+
+  // Front lip
+  fillRound(ctx, fl, deckY + deckH - lw * 0.004, frontW, lw * 0.008, lw * 0.004, aluDark);
+
+  return { screen: { x: sx, y: sy, w: sw, h: sh }, bottom: deckY + deckH };
+}
+
 /** Warm desk surface with softly blurred props, used behind the machine. */
 function deskScene(ctx, W, H, p, o = {}) {
   const horizon = H * (o.horizon ?? 0.42);
@@ -1041,7 +1282,34 @@ function phone(ctx, cx, topY, pw, o = {}) {
   return { screen: { x: sx, y: sy, w: sw, h: sh }, bottom: topY + ph };
 }
 
-/** The phone standing on the warm desk — the "in use" hero shot. */
+/** MacBook on a desk with the template open — the "in use" hero shot. */
+function macbookDesk(ctx, W, H, p, o) {
+  const vertical = H / W > 1.1;
+  deskScene(ctx, W, H, p, { horizon: vertical ? 0.29 : 0.38, ...o });
+  const lw = W * (vertical ? 0.84 : 0.44);
+  const topY = H * (vertical ? 0.235 : 0.095);
+  const img = o.assets?.[o.shot || 'homepage'];
+
+  // Settle in with a slight rise, then a long slow scroll of the page.
+  const a = ease.outQuart(clamp(p * 2.4));
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(0, lerp(H * 0.02, 0, a));
+  const m = macbook(ctx, W / 2, topY, lw, {
+    img,
+    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.5),
+  });
+
+  // Screen glow spilling onto the deck below it
+  const glow = ctx.createLinearGradient(0, m.screen.y + m.screen.h, 0, m.bottom);
+  glow.addColorStop(0, rgba('#FFFFFF', 0.16));
+  glow.addColorStop(1, rgba('#FFFFFF', 0));
+  ctx.fillStyle = glow;
+  ctx.fillRect(W / 2 - lw * 0.6, m.screen.y + m.screen.h, lw * 1.2, m.bottom - (m.screen.y + m.screen.h));
+  ctx.restore();
+}
+
+/** The phone standing on the warm desk. */
 function phoneDesk(ctx, W, H, p, o) {
   const vertical = H / W > 1.1;
   deskScene(ctx, W, H, p, { horizon: vertical ? 0.30 : 0.36, ...o });
@@ -1706,6 +1974,7 @@ export const SCENES = {
   testimonial:      { label: 'Testimonial',         group: 'Offer',   paint: testimonial },
   priceCard:        { label: 'Price Card',          group: 'Offer',   paint: priceCard },
   endCard:          { label: 'End Card / CTA',      group: 'Offer',   paint: endCard },
+  macbookDesk:      { label: 'MacBook on Desk',     group: 'Footage', paint: macbookDesk },
   phoneDesk:        { label: 'Phone on Desk',       group: 'Footage', paint: phoneDesk },
   phoneHero:        { label: 'Phone Product Shot',  group: 'Footage', paint: phoneHero },
   laptopShot:       { label: 'Laptop Mockup',       group: 'Footage', paint: laptopShot },

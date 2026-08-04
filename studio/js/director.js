@@ -337,10 +337,10 @@ const BUILDERS = {
   }),
 
   reveal: (ctx, r) => {
-    const layer = pick(['dashboardHub', 'laptopShot', 'phoneDesk', 'phoneHero'], r);
+    const layer = pick(['dashboardHub', 'laptopShot', 'macbookDesk'], r);
     // The device shots are composed for the full frame — a hard push-in crops
     // the phone and the desk props straight out of it.
-    const roomy = layer === 'phoneDesk' || layer === 'phoneHero';
+    const roomy = layer === 'macbookDesk' || layer === 'phoneDesk' || layer === 'phoneHero';
     return {
       layer,
       layerOpts: { shot: 'homepage', scroll: 0.14 },
