@@ -30,6 +30,9 @@ const state = {
   exporting: false,
   quality: 'hd',
   fps: 30,
+  volume: 0.8,
+  muted: false,
+  library: [],
   brief: {
     angle: 'chaos',
     arc: 'problemSolution',
@@ -126,6 +129,29 @@ function buildSeg(node, entries, current, onPick) {
       'data-v': v,
     }, label));
   });
+}
+
+/** Push `state.brief` back into the DOM, without touching listeners. */
+function syncBriefControls() {
+  $('angle').value = state.brief.angle;
+  $('arc').value = state.brief.arc;
+  $('grade').value = state.brief.grade;
+  $('music').value = state.brief.music;
+  $('arcHint').textContent = ARCS[state.brief.arc].hint;
+  $('musicHint').textContent = STYLES[state.brief.music].hint;
+  $('letterbox').checked = !!state.brief.letterbox;
+
+  [['duration', v => `${v}s`], ['bpm', v => `${v} BPM`],
+   ['grain', v => (+v).toFixed(2)], ['vignette', v => (+v).toFixed(2)],
+   ['leak', v => (+v).toFixed(2)]].forEach(([id, fmt]) => {
+    $(id).value = state.brief[id];
+    $(`${id}Val`).textContent = fmt(state.brief[id]);
+  });
+
+  [...$('formatSeg').children].forEach(c =>
+    c.setAttribute('aria-pressed', String(c.dataset.v === state.brief.format)));
+  [...$('featureChips').children].forEach(c =>
+    c.setAttribute('aria-pressed', String(state.brief.features.includes(c.dataset.k))));
 }
 
 function buildControls() {
@@ -322,14 +348,48 @@ function setPlaying(on) {
   if (on) {
     state.playStartWall = performance.now();
     state.playStartTime = state.time;
-    player.play({
-      style: state.brief.music, bpm: state.brief.bpm, seed: state.board.seed,
-      duration: total, cuts: cutTimes(state.board),
-    }, state.time, false);
+    startScore(total);
   } else {
     player.stop();
     renderPreview();
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Score monitoring                                                    */
+/* ------------------------------------------------------------------ */
+
+async function startScore(total) {
+  if (state.brief.music === 'none') return showAudioWarn(null);
+  // resume() only takes inside a user gesture, and never at all in a
+  // cross-origin frame embedded without the `autoplay` permission.
+  const ok = await player.unlock();
+  showAudioWarn(ok ? null : 'blocked');
+  if (!state.playing) return;
+  player.play({
+    style: state.brief.music, bpm: state.brief.bpm, seed: state.board.seed,
+    duration: total, cuts: cutTimes(state.board),
+  }, state.time, false);
+}
+
+function showAudioWarn(kind) {
+  const box = $('audioWarn');
+  if (!box) return;
+  if (!kind) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML =
+    'This page is running in a frame that blocks Web Audio, so the score can\'t be ' +
+    'monitored here. It is still written into every export — hit <b>Export video</b>, ' +
+    'or <b>Audio .wav</b> for the score on its own.';
+}
+
+function setVolumeUI() {
+  player.setVolume(state.volume);
+  player.setMuted(state.muted);
+  const btn = $('btnMute');
+  if (!btn) return;
+  btn.textContent = state.muted || state.volume === 0 ? '🔇' : state.volume < 0.45 ? '🔉' : '🔊';
+  btn.setAttribute('aria-pressed', String(state.muted));
 }
 
 /* ------------------------------------------------------------------ */
@@ -594,7 +654,7 @@ function moveShot(i, dir) {
 /* Generation                                                          */
 /* ------------------------------------------------------------------ */
 
-function adoptBoard(board) {
+function adoptBoard(board, { remember = true } = {}) {
   state.board = board;
   state.time = 0;
   state.selected = 0;
@@ -608,6 +668,136 @@ function adoptBoard(board) {
   ['btnReroll', 'btnVariant', 'btnExportVideo', 'btnStills', 'btnAudio', 'btnScript', 'btnCaptions']
     .forEach(id => { $(id).disabled = false; });
   updateTopStat();
+  if (remember) {
+    addToLibrary({
+      kind: 'cut',
+      title: board.title,
+      format: state.brief.format,
+      duration: totalDuration(board),
+      shots: board.scenes.length,
+      board: structuredClone(board),
+      brief: { ...state.brief, features: [...state.brief.features] },
+      poster: libPoster(board, state.brief.format),
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Library                                                             */
+/*                                                                     */
+/* Every generated cut is kept for the session so you can flip back     */
+/* through what you made instead of losing it to the next Generate.     */
+/* Exports land here too, and those play inline with sound — a <video>  */
+/* element is subject to far looser autoplay rules than Web Audio.      */
+/* ------------------------------------------------------------------ */
+
+const LIB_LIMIT = 24;
+
+const LIB_TILE = { w: 122, h: 86 };
+
+function libPoster(board, format) {
+  const f = FORMATS[format];
+  // Letterbox into a fixed tile. Left at their own aspect, 9:16 posters stand
+  // twice as tall as the strip that holds them.
+  const s = Math.min(LIB_TILE.w / f.w, LIB_TILE.h / f.h);
+  const iw = Math.round(f.w * s), ih = Math.round(f.h * s);
+
+  const c = el('canvas', { width: LIB_TILE.w * 2, height: LIB_TILE.h * 2 });
+  c.style.width = `${LIB_TILE.w}px`;
+  c.style.height = `${LIB_TILE.h}px`;
+
+  // The reveal beat if there is one, else the first shot — past the opening
+  // title card, where the thumbnails would all look alike.
+  const i = Math.max(0, board.scenes.findIndex(x => x.beat === 'reveal'));
+  let acc = 0;
+  for (let k = 0; k < i; k++) acc += board.scenes[k].dur;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = iw * 2; tmp.height = ih * 2;
+  thumbRenderer.setSize(iw * 2, ih * 2);
+  thumbRenderer.render(tmp.getContext('2d'), board, acc + board.scenes[i].dur * 0.7,
+    { assets: state.assets, quality: 'preview' });
+
+  const g = c.getContext('2d');
+  g.fillStyle = '#0B0805';
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(tmp, (LIB_TILE.w - iw), (LIB_TILE.h - ih), iw * 2, ih * 2);
+  return c;
+}
+
+function addToLibrary(entry) {
+  state.library.unshift({ id: uid(), at: Date.now(), ...entry });
+  while (state.library.length > LIB_LIMIT) {
+    const dropped = state.library.pop();
+    if (dropped.url) URL.revokeObjectURL(dropped.url);
+  }
+  renderLibrary();
+}
+
+function showStrip(tab) {
+  state.strip = tab;
+  [...$('stripTabs').children].forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
+  $('track').hidden = tab !== 'timeline';
+  $('libTrack').hidden = tab !== 'library';
+  document.querySelectorAll('.strip-hint').forEach(n => { n.hidden = n.dataset.for !== tab; });
+  $('shotCount').hidden = tab !== 'timeline';
+}
+
+function renderLibrary() {
+  const track = $('libTrack');
+  if (!track) return;
+  $('libCount').textContent = state.library.length ? `· ${state.library.length}` : '';
+  track.innerHTML = '';
+  if (!state.library.length) {
+    track.appendChild(el('div', { class: 'empty-note' },
+      'Every ad you generate is kept here for the session, and exports land here too — '
+      + 'click one to watch it back with sound.'));
+  }
+
+  state.library.forEach(item => {
+    const card = el('button', {
+      class: 'lib-card', type: 'button',
+      title: item.blob ? 'Play this export' : 'Load this cut back into the editor',
+      onclick: () => (item.blob ? openLightbox(item) : restoreFromLibrary(item)),
+    });
+    card.appendChild(item.poster);
+    card.appendChild(el('span', { class: `tag${item.blob ? ' video' : ''}` },
+      item.blob ? 'video' : item.format));
+    const meta = el('div', { class: 'meta' });
+    meta.appendChild(el('div', { class: 't' }, item.title));
+    meta.appendChild(el('div', { class: 'd' },
+      `${item.duration.toFixed(1)}s · ${item.blob ? `${(item.blob.size / 1048576).toFixed(1)} MB` : `${item.shots} shots`}`));
+    card.appendChild(meta);
+    track.appendChild(card);
+  });
+}
+
+function restoreFromLibrary(item) {
+  setPlaying(false);
+  Object.assign(state.brief, item.brief);
+  syncBriefControls();
+  adoptBoard(structuredClone(item.board), { remember: false });
+  toast(`Loaded “${item.title}”.`, 'ok');
+}
+
+function openLightbox(item) {
+  const box = $('lightbox');
+  const v = $('lbVideo');
+  $('lbTitle').textContent = item.title;
+  $('lbMeta').textContent = `${item.duration.toFixed(1)}s · ${item.codecLabel} · ${(item.blob.size / 1048576).toFixed(1)} MB`;
+  v.src = item.url;
+  box.hidden = false;
+  v.play().catch(() => { /* the controls are right there */ });
+  $('lbDownload').onclick = () => download(item.blob, item.filename);
+}
+
+function closeLightbox() {
+  const v = $('lbVideo');
+  v.pause();
+  v.removeAttribute('src');
+  v.load();
+  $('lightbox').hidden = true;
 }
 
 function updateTopStat() {
@@ -680,7 +870,7 @@ async function doExportVideo() {
   exportRenderer.setSize(canvas.width, canvas.height);
 
   try {
-    const { blob, mime, slowFrames, frames, codec } = await exportVideo({
+    const { blob, mime, slowFrames, frames, codec, remuxed, dropped } = await exportVideo({
       canvas,
       renderer: exportRenderer,
       board: state.board,
@@ -696,16 +886,37 @@ async function doExportVideo() {
       },
     });
 
-    const name = `collegeos-${slug(state.board.title)}-${state.brief.format.replace(':', 'x')}.${extForMime(mime)}`;
+    const ext = extForMime(mime);
+    const name = `collegeos-${slug(state.board.title)}-${state.brief.format.replace(':', 'x')}.${ext}`;
     download(blob, name);
     const mb = (blob.size / 1048576).toFixed(1);
-    $('exportMsg').textContent = `Done — ${mb} MB, ${codec.label} in ${extForMime(mime).toUpperCase()}`;
-    if (slowFrames > frames * 0.1) {
+    $('exportMsg').textContent =
+      `Done — ${mb} MB, ${codec.label}${codec.audio ? ' + audio' : ', no audio track'} in ${ext.toUpperCase()}`;
+
+    addToLibrary({
+      kind: 'video',
+      title: state.board.title,
+      format: state.brief.format,
+      duration: totalDuration(state.board),
+      shots: state.board.scenes.length,
+      blob,
+      url: URL.createObjectURL(blob),
+      filename: name,
+      codecLabel: `${codec.label}${codec.audio ? ' + Opus audio' : ' (silent)'}`,
+      poster: libPoster(state.board, state.brief.format),
+    });
+    showStrip('library');
+
+    if (!codec.audio && state.brief.music !== 'none') {
+      toast('Exported, but no audio track made it into the file. Play it once in the Library — if it is silent there too, the browser blocked the score.', 'err');
+    } else if (dropped > frames * 0.15) {
+      toast(`Exported at full length and in sync, but this machine could only render ${frames - dropped} of ${frames} frames in real time — the motion will judder. Drop to 720p or 30 fps for a smooth file.`, 'err');
+    } else if (slowFrames > frames * 0.1) {
       toast(`Exported, but ${slowFrames} frames rendered slower than real time. Drop to 30 fps or 1080p for a cleaner file.`, 'err');
-    } else if (!codec.ok) {
-      toast(`Exported ${name} (${mb} MB). Your browser encoded ${codec.label}, not H.264 — most platforms accept it, but re-encode before handing it to an editor.`, 'err');
+    } else if (remuxed) {
+      toast(`Exported ${name} — ${mb} MB. Your browser claimed MP4 but encodes ${remuxed.actual}, which most players will not open from a .mp4 file, so the studio wrote a real .webm instead. It plays with sound; re-encode to H.264 if an ad platform insists on MP4.`, 'err');
     } else {
-      toast(`Exported ${name} — ${mb} MB, ${codec.label}.`, 'ok');
+      toast(`Exported ${name} — ${mb} MB, ${codec.label} with audio. It's in the Library below.`, 'ok');
     }
   } catch (err) {
     console.error(err);
@@ -811,6 +1022,24 @@ async function boot() {
     renderPreview();
   });
   $('guides').addEventListener('change', () => renderPreview());
+
+  $('volume').value = String(Math.round(state.volume * 100));
+  $('volume').addEventListener('input', e => {
+    state.volume = e.target.value / 100;
+    if (state.volume > 0) state.muted = false;
+    setVolumeUI();
+  });
+  $('btnMute').addEventListener('click', () => { state.muted = !state.muted; setVolumeUI(); });
+
+  $('btnLibClear').addEventListener('click', () => {
+    state.library.forEach(i => i.url && URL.revokeObjectURL(i.url));
+    state.library = [];
+    renderLibrary();
+  });
+  [...$('stripTabs').children].forEach(b =>
+    b.addEventListener('click', () => showStrip(b.dataset.tab)));
+  $('lbClose').addEventListener('click', closeLightbox);
+  $('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
   $('btnExportVideo').addEventListener('click', doExportVideo);
   $('btnStills').addEventListener('click', doExportStills);
   $('btnAudio').addEventListener('click', doExportAudio);
@@ -823,8 +1052,11 @@ async function boot() {
 
   window.addEventListener('resize', () => { fitCanvas(); if (!state.playing) renderPreview(); });
   window.addEventListener('keydown', e => {
+    if (e.code === 'Escape' && !$('lightbox').hidden) { closeLightbox(); return; }
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (!$('lightbox').hidden) return;
     if (e.code === 'Space') { e.preventDefault(); setPlaying(!state.playing); }
+    if (e.code === 'KeyM') { state.muted = !state.muted; setVolumeUI(); }
     if (e.code === 'ArrowLeft' && state.board) {
       state.time = clamp(state.time - (e.shiftKey ? 1 : 1 / 30), 0, totalDuration(state.board));
       setPlaying(false); renderPreview();
@@ -835,6 +1067,9 @@ async function boot() {
     }
   });
 
+  setVolumeUI();
+  renderLibrary();
+  showStrip('timeline');
   rafId = requestAnimationFrame(loop);
 }
 

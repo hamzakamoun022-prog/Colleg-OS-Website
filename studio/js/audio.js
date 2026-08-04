@@ -317,6 +317,10 @@ export class ScorePlayer {
     this.ctx = null;
     this.streamDest = null;
     this.startedAt = 0;
+    /** Monitor level, 0..1. Never applied to the recorded stream — muting the
+     *  preview must not silence the export. */
+    this.volume = 0.8;
+    this.muted = false;
   }
 
   ensureContext() {
@@ -324,9 +328,39 @@ export class ScorePlayer {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
       this.streamDest = this.ctx.createMediaStreamDestination();
+      // Monitor path: bus -> monitor -> speakers. The stream tap hangs off the
+      // bus directly, upstream of this gain.
+      this.monitor = this.ctx.createGain();
+      this.monitor.connect(this.ctx.destination);
+      this.applyVolume();
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
+  }
+
+  applyVolume() {
+    if (!this.monitor) return;
+    const v = this.muted ? 0 : this.volume;
+    this.monitor.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+  }
+
+  setVolume(v) { this.volume = Math.max(0, Math.min(1, v)); this.applyVolume(); }
+  setMuted(m) { this.muted = !!m; this.applyVolume(); }
+
+  /** True once the context is actually producing sound. */
+  get running() { return this.ctx?.state === 'running'; }
+
+  /**
+   * Ask the browser for permission to make sound. Must be called from a user
+   * gesture. Resolves to false in a cross-origin frame that was embedded
+   * without the `autoplay` permission, where resume() never takes.
+   */
+  async unlock() {
+    const ctx = this.ensureContext();
+    if (ctx.state !== 'running') {
+      try { await ctx.resume(); } catch { /* policy said no */ }
+    }
+    return ctx.state === 'running';
   }
 
   /** Play from `offset` seconds into the score. `toStream` also feeds the recorder. */
@@ -334,7 +368,7 @@ export class ScorePlayer {
     const ctx = this.ensureContext();
     this.stop();
     const bus = ctx.createGain();
-    bus.connect(ctx.destination);
+    bus.connect(this.monitor);
     if (toStream) bus.connect(this.streamDest);
     this.bus = bus;
 

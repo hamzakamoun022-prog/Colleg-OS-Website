@@ -10,20 +10,76 @@ import { totalDuration } from './engine.js';
 import { renderScoreToWav } from './audio.js';
 import { fmtTime } from './util.js';
 
+const MP4_CANDIDATES = [
+  'video/mp4;codecs=avc1.640033,mp4a.40.2',
+  'video/mp4;codecs=avc1.4d002a,mp4a.40.2',
+  'video/mp4',
+];
+const WEBM_CANDIDATES = [
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm',
+];
+
+const supported = c => !!window.MediaRecorder?.isTypeSupported?.(c);
+
 /** Prefer MP4/H.264 where the browser can mux it; fall back to WebM. */
 export function pickMimeType() {
-  const candidates = [
-    'video/mp4;codecs=avc1.640033,mp4a.40.2',
-    'video/mp4;codecs=avc1.4d002a,mp4a.40.2',
-    'video/mp4',
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-  ];
-  for (const c of candidates) {
-    if (window.MediaRecorder?.isTypeSupported?.(c)) return c;
-  }
+  for (const c of [...MP4_CANDIDATES, ...WEBM_CANDIDATES]) if (supported(c)) return c;
   return '';
+}
+
+let probed = null;
+
+/**
+ * Find a mime type the browser will honour — not merely one it claims.
+ *
+ * `isTypeSupported('video/mp4;codecs=avc1…,mp4a…')` returns true on Chromium
+ * builds without the proprietary encoders, which then write VP9 video and Opus
+ * audio into an MP4 container. That file has a `.mp4` name and a real audio
+ * track, but QuickTime, iOS and most editors either refuse it outright or play
+ * it silently — which looks exactly like "the export has no sound".
+ *
+ * So: record a fraction of a second, read what actually came out, and if the
+ * MP4 isn't H.264, record WebM instead. VP9/Opus in a correctly named `.webm`
+ * plays everywhere those same tools accept WebM at all, with its audio intact.
+ */
+export async function resolveMimeType() {
+  if (probed) return probed;
+
+  const webm = WEBM_CANDIDATES.find(supported) || '';
+  const mp4 = MP4_CANDIDATES.find(supported);
+  if (!mp4) return (probed = { mime: webm, honest: true });
+
+  try {
+    const probe = document.createElement('canvas');
+    probe.width = probe.height = 64;
+    const pctx = probe.getContext('2d');
+    pctx.fillStyle = '#8B6F47';
+    pctx.fillRect(0, 0, 64, 64);
+    const stream = probe.captureStream(10);
+    const rec = new MediaRecorder(stream, { mimeType: mp4, videoBitsPerSecond: 200000 });
+    const chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const done = new Promise(res => { rec.onstop = res; });
+    rec.start();
+    // Two paints so the encoder has something to commit before we stop it.
+    for (let i = 0; i < 12; i++) {
+      pctx.fillStyle = i % 2 ? '#8B6F47' : '#2A2118';
+      pctx.fillRect(0, 0, 64, 64);
+      await sleep(20);
+    }
+    rec.stop();
+    await done;
+    stream.getTracks().forEach(t => t.stop());
+
+    const codec = await sniffCodec(new Blob(chunks, { type: mp4 }));
+    if (codec.ok) return (probed = { mime: mp4, honest: true });
+    // MP4 container, non-H.264 payload. WebM is the container that fits it.
+    return (probed = { mime: webm || mp4, honest: !!webm, claimed: mp4, actual: codec.label });
+  } catch {
+    return (probed = { mime: mp4, honest: true });
+  }
 }
 
 export const extForMime = m => (m.startsWith('video/mp4') ? 'mp4' : 'webm');
@@ -46,12 +102,18 @@ export async function sniffCodec(blob) {
     }
     return -1;
   };
-  if (find('avcC') >= 0) return { codec: 'h264', label: 'H.264', ok: true };
-  if (find('hvcC') >= 0) return { codec: 'hevc', label: 'HEVC', ok: true };
-  if (find('vp09') >= 0) return { codec: 'vp9', label: 'VP9', ok: false };
-  if (find('av01') >= 0) return { codec: 'av1', label: 'AV1', ok: false };
-  if (head[0] === 0x1a && head[1] === 0x45) return { codec: 'webm', label: 'WebM', ok: false };
-  return { codec: 'unknown', label: 'unknown', ok: false };
+  const has = tag => find(tag) >= 0;
+  // Whether a sound track made it into the file at all — the one fact worth
+  // reporting plainly, because a silent export is the failure people notice.
+  const audio = has('A_OPUS') || has('A_VORBIS') || has('mp4a') || has('Opus');
+
+  if (has('avcC') || has('V_MPEG4/ISO/AVC')) return { codec: 'h264', label: 'H.264', ok: true, audio };
+  if (has('hvcC')) return { codec: 'hevc', label: 'HEVC', ok: true, audio };
+  if (has('vp09') || has('V_VP9')) return { codec: 'vp9', label: 'VP9', ok: false, audio };
+  if (has('V_VP8')) return { codec: 'vp8', label: 'VP8', ok: false, audio };
+  if (has('av01') || has('V_AV1')) return { codec: 'av1', label: 'AV1', ok: false, audio };
+  if (head[0] === 0x1a && head[1] === 0x45) return { codec: 'webm', label: 'WebM', ok: false, audio };
+  return { codec: 'unknown', label: 'unknown', ok: false, audio };
 }
 
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -73,8 +135,9 @@ export async function exportVideo(o) {
   const ctx = canvas.getContext('2d');
   const duration = totalDuration(board);
   const frames = Math.max(1, Math.round(duration * fps));
-  const mime = pickMimeType();
   if (!window.MediaRecorder) throw new Error('This browser cannot record video.');
+  const chosen = await resolveMimeType();
+  const mime = chosen.mime;
 
   const stream = canvas.captureStream(0);
   const track = stream.getVideoTracks()[0];
@@ -101,27 +164,59 @@ export async function exportVideo(o) {
     rec.onerror = e => reject(e.error || new Error('Recorder failed.'));
   });
 
+  const frameMs = 1000 / fps;
+
+  // Pre-flight: time a few real frames before the recorder is listening. The
+  // score is generated live and in real time, so the video has to keep pace
+  // with the wall clock — starting in a mode the machine can't sustain wastes
+  // the opening seconds discovering that.
+  let quality = 'hd';
+  {
+    let worst = 0;
+    for (const t of [0, duration * 0.45, duration * 0.8]) {
+      const s = performance.now();
+      renderer.render(ctx, board, t, { assets, quality: 'hd' });
+      worst = Math.max(worst, performance.now() - s);
+    }
+    if (worst > frameMs) quality = 'fast';
+  }
+
   // Warm the first frame before the recorder starts so frame 0 is never blank.
-  renderer.render(ctx, board, 0, { assets, quality: 'hd' });
+  renderer.render(ctx, board, 0, { assets, quality });
   await nextFrame();
 
   rec.start();
   if (audioTrack && player) player.play({ ...audio, duration, cuts: cutTimes(board) }, 0, true);
 
   const startedAt = performance.now();
-  const frameMs = 1000 / fps;
   let slowFrames = 0;
   let recentSlow = 0;
-  // If the machine can't keep up, thin the motion-blur sampling rather than let
-  // frames arrive late — a late frame stretches the recorded timeline and drifts
-  // the audio out of sync, which is far more visible than slightly cheaper blur.
-  let quality = 'hd';
+  let dropped = 0;
+  let last = -1;
 
-  for (let i = 0; i < frames; i++) {
+  // The recorder timestamps each frame at the moment it arrives, so the output
+  // length is wall time, not frame count. Rendering every frame however long it
+  // takes therefore stretches the video — a 10s ad that renders at a third of
+  // real time becomes a 30s file whose music stops a third of the way in. So
+  // when a frame comes due late, skip to the frame that is due *now*. A dropped
+  // frame costs some smoothness; a stretched timeline costs the whole edit.
+  for (;;) {
     if (signal?.aborted) break;
-    const t = i / fps;
+    let i = last + 1;
+    if (i >= frames) break;
+
+    const due = Math.floor((performance.now() - startedAt) / frameMs);
+    if (due > i) { dropped += Math.min(due, frames - 1) - i; i = Math.min(due, frames - 1); }
+
+    // Ahead of schedule: hold for this frame's slot.
+    let wait = startedAt + i * frameMs - performance.now();
+    while (wait > 2) {
+      await sleep(Math.min(wait, 16));
+      wait = startedAt + i * frameMs - performance.now();
+    }
+
     const renderStart = performance.now();
-    renderer.render(ctx, board, t, { assets, quality });
+    renderer.render(ctx, board, i / fps, { assets, quality });
     if (performance.now() - renderStart > frameMs) {
       slowFrames++;
       if (++recentSlow >= 8 && quality === 'hd') quality = 'fast';
@@ -129,16 +224,10 @@ export async function exportVideo(o) {
       recentSlow--;
     }
 
-    // Pace to the wall clock so the recorder timestamps frames correctly.
-    const target = startedAt + i * frameMs;
-    let wait = target - performance.now();
-    while (wait > 2) {
-      await sleep(Math.min(wait, 16));
-      wait = target - performance.now();
-    }
     track.requestFrame();
+    last = i;
     if (i % 3 === 0) await nextFrame();
-    onProgress(i / frames, { frame: i, frames, slowFrames });
+    onProgress(i / frames, { frame: i, frames, slowFrames, dropped });
   }
 
   // Let the last frame land before closing the muxer.
@@ -147,8 +236,15 @@ export async function exportVideo(o) {
   player?.stop();
   const blob = await done;
   const codec = await sniffCodec(blob);
-  onProgress(1, { frame: frames, frames, slowFrames });
-  return { blob, mime: mime || 'video/webm', slowFrames, frames, codec };
+  const wallSeconds = (performance.now() - startedAt) / 1000;
+  onProgress(1, { frame: frames, frames, slowFrames, dropped });
+  return {
+    blob, mime: mime || 'video/webm', slowFrames, frames, codec, dropped,
+    // How far the recording drifted from the storyboard's own length.
+    stretch: wallSeconds / duration,
+    // Present when the browser lied about MP4 and we fell back to WebM.
+    remuxed: chosen.claimed ? { claimed: chosen.claimed, actual: chosen.actual } : null,
+  };
 }
 
 /** Times (seconds) of every cut, used to place whooshes and impacts. */

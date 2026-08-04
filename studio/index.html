@@ -192,16 +192,77 @@
   .tc { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); white-space: nowrap; }
   .tc b { color: var(--text); font-weight: 500; }
 
+  .vol { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .vol input[type=range] { width: 74px; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 7px;
+    color: var(--text); cursor: pointer; padding: 5px 8px; font-size: 13px; line-height: 1;
+  }
+  .icon-btn:hover { border-color: var(--line-strong); }
+  .icon-btn[aria-pressed=true] { color: var(--muted); opacity: .6; }
+  .audio-warn {
+    padding: 9px 18px; font-size: 12px; line-height: 1.6;
+    background: rgba(180,80,50,.14); border-top: 1px solid rgba(200,110,70,.35); color: #E7BFA6;
+  }
+
+  /* ---------- library ---------- */
+  .tabs { display: flex; gap: 2px; }
+  .tabs button {
+    background: transparent; border: 0; cursor: pointer; padding: 3px 9px; border-radius: 6px;
+    font: inherit; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted);
+  }
+  .tabs button:hover { color: var(--text); }
+  .tabs button[aria-pressed=true] { color: var(--accent); background: rgba(201,169,110,.12); }
+  .tabs button b { font-weight: 500; opacity: .75; }
+  .timeline-head .btn { width: auto; flex-shrink: 0; }
+  .timeline-head .strip-hint { white-space: nowrap; }
+  .lib-card {
+    position: relative; flex-shrink: 0; width: 122px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel-2); overflow: hidden;
+    cursor: pointer; transition: border-color .14s, transform .14s;
+    display: flex; flex-direction: column; text-align: left; padding: 0; color: inherit; font: inherit;
+  }
+  .lib-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .lib-card canvas, .lib-card .poster { width: 100%; display: block; background: #0B0805; }
+  .lib-card .meta { padding: 6px 8px 7px; }
+  .lib-card .meta .t {
+    font-size: 11px; color: var(--text); line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .lib-card .meta .d { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .lib-card .tag {
+    position: absolute; top: 5px; right: 5px; border-radius: 4px; font-size: 9px;
+    padding: 2px 6px; letter-spacing: .5px; text-transform: uppercase;
+    background: rgba(20,16,10,.85); color: var(--muted);
+  }
+  .lib-card .tag.video { color: #201806; background: var(--accent); }
+
+  /* `display:flex` would otherwise beat the `hidden` attribute. */
+  .lightbox[hidden] { display: none; }
+  .lightbox {
+    position: fixed; inset: 0; z-index: 60; display: flex; align-items: center;
+    justify-content: center; background: rgba(8,6,3,.86); backdrop-filter: blur(8px); padding: 24px;
+  }
+  .lightbox-inner {
+    display: flex; flex-direction: column; gap: 10px; max-width: 100%; max-height: 100%;
+  }
+  .lightbox-head { display: flex; align-items: center; gap: 10px; }
+  .lightbox video {
+    max-width: min(92vw, 520px); max-height: 74vh; border-radius: 8px; background: #000;
+    box-shadow: 0 30px 90px rgba(0,0,0,.7);
+  }
+
   /* ---------- timeline ---------- */
   .timeline {
     border-top: 1px solid var(--line); background: #171209;
-    padding: 10px 14px 14px; overflow-x: auto; max-height: 174px;
+    padding: 10px 14px 14px; overflow-x: auto; max-height: 200px;
   }
   .timeline-head {
     display: flex; align-items: center; gap: 10px; margin-bottom: 9px;
     font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted);
   }
   .track { display: flex; gap: 7px; align-items: stretch; min-height: 96px; }
+  .track[hidden] { display: none; }
   .shot {
     position: relative; flex-shrink: 0; width: 104px; border-radius: 9px;
     border: 1px solid var(--line); background: var(--panel-2); overflow: hidden;
@@ -424,21 +485,45 @@
         <button class="play-btn" id="btnPlay" title="Play / pause (space)">▶</button>
         <input type="range" class="scrub" id="scrub" min="0" max="1000" value="0" step="1">
         <div class="tc"><b id="tcNow">0:00.0</b> / <span id="tcTotal">0:00.0</span></div>
+        <div class="vol" title="Score volume">
+          <button class="icon-btn" id="btnMute" aria-label="Mute score">🔊</button>
+          <input type="range" id="volume" min="0" max="100" step="1" value="80" aria-label="Score volume">
+        </div>
         <label class="switch" title="Show platform UI safe areas">
           <input type="checkbox" id="guides"> Safe areas
         </label>
       </div>
+      <div class="audio-warn" id="audioWarn" hidden></div>
 
       <div class="timeline">
         <div class="timeline-head">
-          <span>Timeline</span>
+          <div class="tabs" id="stripTabs">
+            <button type="button" data-tab="timeline" aria-pressed="true">Timeline</button>
+            <button type="button" data-tab="library" aria-pressed="false">Library <b id="libCount"></b></button>
+          </div>
           <span id="shotCount" style="color:var(--accent)"></span>
           <span style="flex:1"></span>
-          <span>Click a shot to edit it</span>
+          <span class="strip-hint" data-for="timeline">Click a shot to edit it</span>
+          <span class="strip-hint" data-for="library" hidden>Click a cut to reopen it · an export to watch it</span>
+          <button class="btn sm ghost strip-hint" data-for="library" id="btnLibClear" hidden>Clear</button>
         </div>
         <div class="track" id="track"></div>
+        <div class="track" id="libTrack" hidden></div>
       </div>
     </main>
+
+    <div class="lightbox" id="lightbox" hidden>
+      <div class="lightbox-inner">
+        <div class="lightbox-head">
+          <b id="lbTitle"></b>
+          <span class="hint" id="lbMeta"></span>
+          <span style="flex:1"></span>
+          <button class="btn sm" id="lbDownload">⬇ Download</button>
+          <button class="icon-btn" id="lbClose" aria-label="Close">✕</button>
+        </div>
+        <video id="lbVideo" controls playsinline></video>
+      </div>
+    </div>
 
     <!-- ============ RIGHT RAIL: SHOT INSPECTOR ============ -->
     <aside class="rail right" id="railRight">
