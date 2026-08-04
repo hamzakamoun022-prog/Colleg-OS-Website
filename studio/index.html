@@ -399,6 +399,43 @@
             <label for="bpm">Tempo — cuts snap to this <b id="bpmVal">96 BPM</b></label>
             <input type="range" id="bpm" min="60" max="140" step="2" value="96">
           </div>
+
+          <div class="field">
+            <label for="voiceMode">Voiceover</label>
+            <select id="voiceMode">
+              <option value="off">Off</option>
+              <option value="system">System voice — preview only</option>
+              <option value="track">Voice track — baked into exports</option>
+            </select>
+            <div class="hint" id="voiceHint"></div>
+          </div>
+          <div id="voiceSystem" hidden>
+            <div class="field">
+              <label for="voicePick">Voice</label>
+              <select id="voicePick"></select>
+            </div>
+            <div class="field">
+              <label for="voiceRate">Pace <b id="voiceRateVal">1.00×</b></label>
+              <input type="range" id="voiceRate" min="0.6" max="1.6" step="0.05" value="1">
+            </div>
+          </div>
+          <div id="voiceTrack" hidden>
+            <div class="field">
+              <label for="voiceFile">Voice file</label>
+              <input type="file" id="voiceFile" accept="audio/*">
+              <div class="hint" id="voiceFileHint">WAV, MP3, M4A or AIFF. Plays from the top of the ad.</div>
+            </div>
+          </div>
+          <div id="voiceMix" hidden>
+            <div class="field">
+              <label for="voiceLevel">Voice level <b id="voiceLevelVal">1.00</b></label>
+              <input type="range" id="voiceLevel" min="0" max="1.5" step="0.05" value="1">
+            </div>
+            <div class="field">
+              <label for="voiceDuck">Duck the music under it <b id="voiceDuckVal">0.55</b></label>
+              <input type="range" id="voiceDuck" min="0" max="0.9" step="0.05" value="0.55">
+            </div>
+          </div>
           <div class="field">
             <label for="grain">Film grain <b id="grainVal">0.35</b></label>
             <input type="range" id="grain" min="0" max="1" step="0.05" value="0.35">
@@ -462,6 +499,9 @@
           <div class="btn-row">
             <button class="btn sm" id="btnScript" disabled>Script .txt</button>
             <button class="btn sm" id="btnCaptions" disabled>Captions .vtt</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn sm" id="btnVoiceScript" disabled>Voiceover script .txt</button>
           </div>
         </div>
       </section>

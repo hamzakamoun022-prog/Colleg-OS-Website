@@ -9,6 +9,7 @@
 // the edit points.
 
 import { rng, hashSeed } from './util.js';
+import { scheduleVoice } from './voice.js';
 
 const midi = n => 440 * 2 ** ((n - 69) / 12);
 
@@ -363,7 +364,13 @@ export class ScorePlayer {
     return ctx.state === 'running';
   }
 
-  /** Play from `offset` seconds into the score. `toStream` also feeds the recorder. */
+  /**
+   * Play from `offset` seconds into the score. `toStream` also feeds the recorder.
+   *
+   * `opts.voice` — {buffer, volume, duck} — is mixed in here rather than by the
+   * caller so it reaches the recorder tap on the same bus as the music, which
+   * is the whole point of a voice track over the system speech synthesiser.
+   */
   play(opts, offset = 0, toStream = false) {
     const ctx = this.ensureContext();
     this.stop();
@@ -372,11 +379,27 @@ export class ScorePlayer {
     if (toStream) bus.connect(this.streamDest);
     this.bus = bus;
 
+    // Music hangs off its own gain so the voice has something to duck.
+    const music = ctx.createGain();
+    music.connect(bus);
+    this.music = music;
+
     // Schedule the whole score, shifted so `offset` lands at "now".
     // Shift the whole score back so `offset` lands on "now". Everything that
     // falls before the current time is dropped by the voices themselves.
     const t0 = ctx.currentTime + 0.06 - offset;
-    scheduleScore(ctx, bus, { ...opts, t0 });
+    scheduleScore(ctx, music, { ...opts, t0 });
+
+    if (opts.voice?.buffer) {
+      scheduleVoice(ctx, bus, opts.voice.buffer, {
+        t0, at: opts.voice.at ?? 0,
+        volume: opts.voice.volume ?? 1,
+        duck: opts.voice.duck ?? 0.55,
+        duckTarget: music,
+        duration: opts.duration,
+      });
+    }
+
     this.startedAt = ctx.currentTime;
     return t0;
   }
@@ -385,6 +408,7 @@ export class ScorePlayer {
     if (this.bus) {
       try { this.bus.disconnect(); } catch { /* already gone */ }
       this.bus = null;
+      this.music = null;
     }
   }
 
@@ -399,13 +423,37 @@ export class ScorePlayer {
 /* ------------------------------------------------------------------ */
 
 export async function renderScoreToWav(opts) {
-  const sampleRate = 48000;
+  return encodeWav(await renderScoreToBuffer(opts));
+}
+
+/**
+ * The finished mix as an AudioBuffer.
+ *
+ * Rendered offline, so it is identical every time and completes far faster
+ * than real time — which is what lets the WebCodecs exporter encode audio
+ * without playing it.
+ */
+export async function renderScoreToBuffer(opts) {
+  const sampleRate = opts.sampleRate || 48000;
   const duration = (opts.duration || 20) + 1.2;
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   const ctx = new OAC(2, Math.ceil(sampleRate * duration), sampleRate);
-  scheduleScore(ctx, ctx.destination, { ...opts, t0: 0 });
-  const buffer = await ctx.startRendering();
-  return encodeWav(buffer);
+
+  const music = ctx.createGain();
+  music.connect(ctx.destination);
+  scheduleScore(ctx, music, { ...opts, t0: 0 });
+
+  if (opts.voice?.buffer) {
+    scheduleVoice(ctx, ctx.destination, opts.voice.buffer, {
+      t0: 0, at: opts.voice.at ?? 0,
+      volume: opts.voice.volume ?? 1,
+      duck: opts.voice.duck ?? 0.55,
+      duckTarget: music,
+      duration: opts.duration,
+    });
+  }
+
+  return ctx.startRendering();
 }
 
 function encodeWav(buffer) {

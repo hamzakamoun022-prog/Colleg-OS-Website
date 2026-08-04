@@ -10,6 +10,9 @@ import {
 } from './director.js';
 import { STYLES, ScorePlayer } from './audio.js';
 import {
+  voiceScript, voiceScriptText, listVoices, speechSupported, SystemVoice, decodeVoiceTrack,
+} from './voice.js';
+import {
   exportVideo, exportStills, exportScript, exportCaptions, exportAudio,
   download, slug, extForMime, pickMimeType, cutTimes,
 } from './export.js';
@@ -33,6 +36,15 @@ const state = {
   volume: 0.8,
   muted: false,
   library: [],
+  voice: {
+    mode: 'off',        // off | system | track
+    voiceURI: '',
+    rate: 1,
+    level: 1,
+    duck: 0.55,
+    buffer: null,       // decoded voice track
+    fileName: '',
+  },
   brief: {
     angle: 'chaos',
     arc: 'problemSolution',
@@ -53,6 +65,7 @@ const state = {
 const renderer = new Renderer();
 const thumbRenderer = new Renderer();
 const player = new ScorePlayer();
+const systemVoice = new SystemVoice();
 
 const $ = id => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -351,6 +364,7 @@ function setPlaying(on) {
     startScore(total);
   } else {
     player.stop();
+    systemVoice.stop();
     renderPreview();
   }
 }
@@ -359,8 +373,21 @@ function setPlaying(on) {
 /* Score monitoring                                                    */
 /* ------------------------------------------------------------------ */
 
+/** The voice payload for the score player, or null when there's nothing to bake. */
+function voicePayload() {
+  const v = state.voice;
+  if (v.mode !== 'track' || !v.buffer) return null;
+  return { buffer: v.buffer, volume: v.level, duck: v.duck, at: 0 };
+}
+
 async function startScore(total) {
-  if (state.brief.music === 'none') return showAudioWarn(null);
+  if (state.voice.mode === 'system') {
+    systemVoice.voiceURI = state.voice.voiceURI;
+    systemVoice.rate = state.voice.rate;
+    systemVoice.volume = state.muted ? 0 : state.volume;
+    systemVoice.start(voiceScript(state.board), state.time);
+  }
+  if (state.brief.music === 'none' && state.voice.mode !== 'track') return showAudioWarn(null);
   // resume() only takes inside a user gesture, and never at all in a
   // cross-origin frame embedded without the `autoplay` permission.
   const ok = await player.unlock();
@@ -368,7 +395,7 @@ async function startScore(total) {
   if (!state.playing) return;
   player.play({
     style: state.brief.music, bpm: state.brief.bpm, seed: state.board.seed,
-    duration: total, cuts: cutTimes(state.board),
+    duration: total, cuts: cutTimes(state.board), voice: voicePayload(),
   }, state.time, false);
 }
 
@@ -381,6 +408,85 @@ function showAudioWarn(kind) {
     'This page is running in a frame that blocks Web Audio, so the score can\'t be ' +
     'monitored here. It is still written into every export — hit <b>Export video</b>, ' +
     'or <b>Audio .wav</b> for the score on its own.';
+}
+
+/* ------------------------------------------------------------------ */
+/* Voiceover                                                           */
+/* ------------------------------------------------------------------ */
+
+const VOICE_HINTS = {
+  off: 'No narration — music and cut sound design only.',
+  system: 'Uses the voices installed on this computer. They sound good, but the '
+        + 'browser will not let a page record them, so this is for auditioning '
+        + 'the script — exports stay music-only.',
+  track: 'Load a narration file and it is mixed in properly, ducking the music, '
+       + 'and written into every export. Export the voiceover script below, run '
+       + 'it through any text-to-speech, and bring the audio back here.',
+};
+
+async function buildVoiceControls() {
+  const pick = $('voicePick');
+  const mode = $('voiceMode');
+  if (!mode) return;
+
+  if (!speechSupported()) {
+    mode.querySelector('[value=system]').disabled = true;
+    mode.querySelector('[value=system]').textContent = 'System voice — not available here';
+  } else {
+    const voices = await listVoices();
+    fillSelect(pick, voices.map(v => [v.voiceURI, `${v.name} (${v.lang})`]), state.voice.voiceURI);
+    if (!state.voice.voiceURI && voices[0]) {
+      state.voice.voiceURI = voices[0].voiceURI;
+      pick.value = voices[0].voiceURI;
+    }
+    if (!voices.length) {
+      // A headless or freshly-installed browser has the API but no voices.
+      mode.querySelector('[value=system]').disabled = true;
+      mode.querySelector('[value=system]').textContent = 'System voice — no voices installed';
+    }
+  }
+
+  mode.value = state.voice.mode;
+  mode.addEventListener('change', e => {
+    state.voice.mode = e.target.value;
+    systemVoice.stop();
+    syncVoiceUI();
+  });
+  pick.addEventListener('change', e => { state.voice.voiceURI = e.target.value; });
+
+  [['voiceRate', v => `${(+v).toFixed(2)}×`, v => { state.voice.rate = +v; }],
+   ['voiceLevel', v => (+v).toFixed(2), v => { state.voice.level = +v; }],
+   ['voiceDuck', v => (+v).toFixed(2), v => { state.voice.duck = +v; }]].forEach(([id, fmt, set]) => {
+    const input = $(id);
+    $(`${id}Val`).textContent = fmt(input.value);
+    input.addEventListener('input', () => { $(`${id}Val`).textContent = fmt(input.value); set(input.value); });
+  });
+
+  $('voiceFile').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const ctx = player.ensureContext();
+      state.voice.buffer = await decodeVoiceTrack(file, ctx);
+      state.voice.fileName = file.name;
+      $('voiceFileHint').textContent =
+        `${file.name} — ${state.voice.buffer.duration.toFixed(1)}s loaded.`;
+      toast(`Voice track loaded (${state.voice.buffer.duration.toFixed(1)}s).`, 'ok');
+    } catch (err) {
+      state.voice.buffer = null;
+      toast(String(err.message || err), 'err');
+    }
+  });
+
+  syncVoiceUI();
+}
+
+function syncVoiceUI() {
+  const m = state.voice.mode;
+  $('voiceHint').textContent = VOICE_HINTS[m];
+  $('voiceSystem').hidden = m !== 'system';
+  $('voiceTrack').hidden = m !== 'track';
+  $('voiceMix').hidden = m !== 'track';
 }
 
 function setVolumeUI() {
@@ -665,8 +771,8 @@ function adoptBoard(board, { remember = true } = {}) {
   renderTimeline();
   renderInspector();
   renderPreview();
-  ['btnReroll', 'btnVariant', 'btnExportVideo', 'btnStills', 'btnAudio', 'btnScript', 'btnCaptions']
-    .forEach(id => { $(id).disabled = false; });
+  ['btnReroll', 'btnVariant', 'btnExportVideo', 'btnStills', 'btnAudio', 'btnScript',
+   'btnCaptions', 'btnVoiceScript'].forEach(id => { $(id).disabled = false; });
   updateTopStat();
   if (remember) {
     addToLibrary({
@@ -870,7 +976,7 @@ async function doExportVideo() {
   exportRenderer.setSize(canvas.width, canvas.height);
 
   try {
-    const { blob, mime, slowFrames, frames, codec, remuxed, dropped } = await exportVideo({
+    const { blob, mime, slowFrames, frames, codec, remuxed, dropped, encoder } = await exportVideo({
       canvas,
       renderer: exportRenderer,
       board: state.board,
@@ -879,7 +985,9 @@ async function doExportVideo() {
       player,
       audio: {
         style: state.brief.music, bpm: state.brief.bpm, seed: state.board.seed,
+        voice: voicePayload(),
       },
+      onNotice: msg => toast(msg, 'err'),
       onProgress: (p, stats) => {
         $('exportBar').style.width = `${(p * 100).toFixed(1)}%`;
         $('exportMsg').textContent = `Frame ${stats.frame} of ${stats.frames}`;
@@ -913,6 +1021,8 @@ async function doExportVideo() {
       toast(`Exported at full length and in sync, but this machine could only render ${frames - dropped} of ${frames} frames in real time — the motion will judder. Drop to 720p or 30 fps for a smooth file.`, 'err');
     } else if (slowFrames > frames * 0.1) {
       toast(`Exported, but ${slowFrames} frames rendered slower than real time. Drop to 30 fps or 1080p for a cleaner file.`, 'err');
+    } else if (encoder === 'webcodecs' && codec.ok) {
+      toast(`Exported ${name} — ${mb} MB, H.264 MP4 with audio, every frame encoded. It's in the Library below.`, 'ok');
     } else if (remuxed) {
       toast(`Exported ${name} — ${mb} MB. Your browser claimed MP4 but encodes ${remuxed.actual}, which most players will not open from a .mp4 file, so the studio wrote a real .webm instead. It plays with sound; re-encode to H.264 if an ad platform insists on MP4.`, 'err');
     } else {
@@ -960,6 +1070,7 @@ async function doExportAudio() {
   try {
     const wav = await exportAudio(state.board, {
       style: state.brief.music, bpm: state.brief.bpm, seed: state.board.seed,
+      voice: voicePayload(),
     });
     download(wav, `collegeos-${slug(state.board.title)}-score.wav`);
     toast('Score exported as WAV.', 'ok');
@@ -1049,6 +1160,9 @@ async function boot() {
   $('btnCaptions').addEventListener('click', () => {
     download(exportCaptions(state.board), `collegeos-${slug(state.board.title)}.vtt`);
   });
+  $('btnVoiceScript').addEventListener('click', () => {
+    download(voiceScriptText(state.board), `collegeos-${slug(state.board.title)}-voiceover.txt`);
+  });
 
   window.addEventListener('resize', () => { fitCanvas(); if (!state.playing) renderPreview(); });
   window.addEventListener('keydown', e => {
@@ -1068,6 +1182,7 @@ async function boot() {
   });
 
   setVolumeUI();
+  buildVoiceControls();
   renderLibrary();
   showStrip('timeline');
   rafId = requestAnimationFrame(loop);

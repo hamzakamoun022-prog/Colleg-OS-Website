@@ -193,3 +193,6 @@ export function shuffle(arr, r = Math.random) {
   }
   return a;
 }
+
+/** Strip the studio's `*highlight*` markup, leaving the words alone. */
+export const stripMarkup = s => String(s ?? '').replace(/\*/g, '');

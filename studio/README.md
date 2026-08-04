@@ -58,6 +58,31 @@ it can't start at all; the studio detects that and says so under the transport
 rather than playing silently. The score is still written into every export, and
 *Audio .wav* renders it offline regardless.
 
+### Voiceover
+
+The *Voiceover* control has two sources, because no single one does both jobs.
+
+**System voice** speaks the script through the browser's own `speechSynthesis`.
+On a Mac those are the best voices you have for free — but Chrome routes them
+straight to the sound card, and a page cannot record them. It is for
+auditioning the script and its timing; exports stay music-only.
+
+**Voice track** takes an audio file, mixes it in properly — ducking the music
+about 9 dB underneath, with a high-pass and a presence lift so the words sit
+forward — and writes it into every export. Any source works.
+
+The workflow is: pick an angle, generate, hit *Voiceover script .txt*, and you
+get one timestamped line per shot. Feed that to whatever text-to-speech you
+prefer and load the audio back in. On macOS that is one command:
+
+```sh
+say -v Samantha -r 175 -o voice.aiff -f script.txt
+```
+
+Both sources read the same script, derived from each shot's on-screen copy — so
+what you audition is what you bake in. *Voice level* and *Duck the music under
+it* set the balance.
+
 ## Writing copy with Claude
 
 Paste an Anthropic API key into the brief panel and *Write copy with Claude*
@@ -70,35 +95,34 @@ are seeded so each generation is different but reproducible.
 
 ## Export notes
 
-Video is captured by pushing exactly one frame per output frame through
-`canvas.captureStream(0)`, paced against the wall clock. That avoids the dropped
-and duplicated frames you get from a naive realtime capture, and keeps the
-procedural score in sync.
+Video is **encoded**, not recorded. `VideoEncoder` (WebCodecs) takes
+(frame, timestamp) pairs at whatever rate the machine can draw them and writes
+exactly the video you asked for, so a slow render produces a slow *export* —
+never a slow, stuttering, or stretched *file*. Audio is rendered offline and
+encoded the same way, so it cannot drift.
 
-The recorder timestamps frames as they arrive, so the file's length is wall
-time — not frame count. If a frame comes due late the studio skips to the frame
-that is due *now* rather than rendering every frame however long it takes. A
-dropped frame costs some smoothness; falling behind would stretch the video past
-the end of the music, which costs the whole edit. Before recording starts it
-times three real frames and drops motion-blur sampling up front if the machine
-can't sustain the frame rate.
+That matters more than it sounds. The old path wired a `MediaRecorder` to a live
+canvas stream, which timestamps frames as they arrive. A 1080×1920 frame with
+motion blur takes well over 33ms to draw on a machine without a spare GPU, so
+most frames arrived late and the only outcomes were a stretched timeline or a
+dropped frame. On one test box a 9.4-second ad came out as a 26.5-second file
+whose music stopped a third of the way through.
 
-Three things worth knowing:
+- **You get a real H.264 MP4 wherever the browser can encode one.** The studio
+  asks `VideoEncoder.isConfigSupported` for each H.264 profile in turn and only
+  claims MP4 when one actually works, falling back to VP9-in-WebM otherwise.
+  Nothing is ever labelled `.mp4` unless it really is one.
+- **The completion message reports what's really in the file** — codec, whether
+  an audio track made it in, and the container.
+- Browsers without WebCodecs fall back to the `MediaRecorder` path, which is
+  still real time. There the studio paces to the wall clock, skips to the frame
+  that is due *now* when it falls behind, and probes what the browser actually
+  encodes before trusting an `isTypeSupported` answer for MP4. Keep the tab in
+  front — background tabs get throttled. If more than about 15% of frames had to
+  be dropped it says so; drop to 720p or 30 fps and re-export.
 
-- **Keep the tab in front while exporting.** Background tabs get throttled and
-  the capture stretches.
-- **You may get a `.webm`, not an `.mp4`.** Some Chromium builds report
-  `video/mp4;codecs=avc1,mp4a` as supported and then encode VP9 video and Opus
-  audio into the MP4 container. That file has a real audio track but QuickTime,
-  iOS and most editors either refuse it or play it silently. The studio records
-  a fraction of a second first, reads what actually came out, and falls back to
-  a correctly named WebM when the MP4 is a lie. WebM with VP9 and Opus plays
-  properly, with sound. Re-encode to H.264 if an ad platform insists on MP4.
-- **The completion message reports what's really in the file** — the video
-  codec, whether an audio track made it in, and the container.
-
-If more than about 15% of frames had to be dropped, the studio says so. Drop to
-720p or 30 fps and re-export.
+The two muxers that turn encoded chunks into a playable file are vendored under
+`js/vendor/` — see the README there.
 
 ## Layout
 
@@ -113,7 +137,9 @@ studio/
     engine.js     plate → camera → grade → type → transition, one frame at a time
     director.js   brief → storyboard; copy banks and the optional Claude path
     audio.js      procedural score, beat-locked to the cut, plus WAV render
-    export.js     frame-paced capture, stills, ZIP, script, captions
+    voice.js      voiceover: timed script, system speech, voice-track mixing
+    export.js     WebCodecs encode (recorder fallback), stills, ZIP, script, captions
+    vendor/       webm-muxer + mp4-muxer (MIT), the only third-party code
     app.js        state, playback, timeline, inspector, export wiring
   assets/         real product screenshots, extracted from the landing page
 ```

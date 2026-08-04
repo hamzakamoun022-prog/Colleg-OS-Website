@@ -7,8 +7,10 @@
 // sync, which is what a plain realtime capture cannot guarantee.
 
 import { totalDuration } from './engine.js';
-import { renderScoreToWav } from './audio.js';
-import { fmtTime } from './util.js';
+import { renderScoreToWav, renderScoreToBuffer } from './audio.js';
+import { fmtTime, stripMarkup } from './util.js';
+import { Muxer as WebMMuxer, ArrayBufferTarget as WebMTarget } from './vendor/webm-muxer.mjs';
+import { Muxer as MP4Muxer, ArrayBufferTarget as MP4Target } from './vendor/mp4-muxer.mjs';
 
 const MP4_CANDIDATES = [
   'video/mp4;codecs=avc1.640033,mp4a.40.2',
@@ -119,6 +121,197 @@ export async function sniffCodec(blob) {
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* ------------------------------------------------------------------ */
+/* WebCodecs export                                                    */
+/*                                                                     */
+/* MediaRecorder records; WebCodecs encodes. The difference decides     */
+/* everything about a canvas export.                                    */
+/*                                                                     */
+/* A recorder is wired to a live stream, so a frame that takes 120ms to */
+/* draw is a frame that arrives late, and the only two outcomes are a   */
+/* stretched timeline or a dropped frame. On a laptop with a busy GPU   */
+/* — or any machine rendering 1080×1920 with motion blur — that is most */
+/* frames. An encoder takes (frame, timestamp) pairs at whatever rate   */
+/* you can produce them and writes exactly the video you asked for.     */
+/*                                                                     */
+/* It also encodes the audio from an offline render rather than playing */
+/* it, and reports its real codec, so the container can never disagree  */
+/* with its contents.                                                   */
+/* ------------------------------------------------------------------ */
+
+export const webcodecsSupported = () =>
+  typeof window !== 'undefined' && 'VideoEncoder' in window && 'AudioEncoder' in window;
+
+const H264_CANDIDATES = ['avc1.640033', 'avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
+
+/**
+ * The best (codec, container) pair this browser can actually encode.
+ *
+ * H.264 in MP4 is what ad platforms and editors want, so it's tried first and
+ * verified with `isConfigSupported` rather than assumed.
+ */
+export async function pickEncoding(width, height, fps) {
+  if (!webcodecsSupported()) return null;
+  // VP9 buys roughly a third off H.264 at the same perceived quality, so it
+  // does not need the same budget.
+  const rate = k => Math.round(width * height * fps * k);
+  const base = { width, height, framerate: fps, bitrate: rate(0.11) };
+
+  for (const codec of H264_CANDIDATES) {
+    try {
+      const s = await VideoEncoder.isConfigSupported({ ...base, codec, avc: { format: 'avc' } });
+      if (s.supported) {
+        const aac = await AudioEncoder.isConfigSupported({
+          codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 160000,
+        }).catch(() => ({ supported: false }));
+        return {
+          container: 'mp4', video: codec, audio: aac.supported ? 'mp4a.40.2' : 'opus',
+          label: 'H.264', ok: true, extra: { avc: { format: 'avc' } }, bitrate: rate(0.11),
+        };
+      }
+    } catch { /* try the next profile */ }
+  }
+
+  for (const [codec, label] of [['vp09.00.10.08', 'VP9'], ['vp8', 'VP8']]) {
+    try {
+      const s = await VideoEncoder.isConfigSupported({ ...base, codec });
+      if (s.supported) {
+        return { container: 'webm', video: codec, audio: 'opus', label, ok: false,
+                 extra: {}, bitrate: rate(codec === 'vp8' ? 0.10 : 0.07) };
+      }
+    } catch { /* keep looking */ }
+  }
+  return null;
+}
+
+/**
+ * Render a storyboard to a video Blob with WebCodecs. Not real time — this
+ * runs as fast as the machine can draw, and the output frame rate is exact
+ * either way.
+ */
+export async function exportVideoFast(o) {
+  const {
+    canvas, renderer, board, assets, fps = 30, audio,
+    onProgress = () => {}, signal,
+  } = o;
+
+  const ctx = canvas.getContext('2d');
+  const duration = totalDuration(board);
+  const frames = Math.max(1, Math.round(duration * fps));
+  const enc = await pickEncoding(canvas.width, canvas.height, fps);
+  if (!enc) throw new Error('This browser cannot encode video with WebCodecs.');
+
+  // Audio first: it is quick, and a failure here should not waste a render.
+  let audioBuffer = null;
+  if (audio && (audio.style !== 'none' || audio.voice?.buffer)) {
+    audioBuffer = await renderScoreToBuffer({ ...audio, duration, cuts: cutTimes(board) });
+  }
+  // The offline render leaves 1.2s of tail for reverb and release. Encoding all
+  // of it makes the file outlast its own last frame, which reads as a hang at
+  // the end of the ad. Keep a short tail and fade it out.
+  const audioFrames = audioBuffer
+    ? Math.min(audioBuffer.length, Math.ceil((duration + 0.25) * audioBuffer.sampleRate))
+    : 0;
+
+  const target = enc.container === 'mp4' ? new MP4Target() : new WebMTarget();
+  const Muxer = enc.container === 'mp4' ? MP4Muxer : WebMMuxer;
+  const muxer = new Muxer({
+    target,
+    video: {
+      codec: enc.container === 'mp4' ? 'avc' : (enc.video.startsWith('vp09') ? 'V_VP9' : 'V_VP8'),
+      width: canvas.width, height: canvas.height, frameRate: fps,
+    },
+    audio: audioBuffer ? {
+      codec: enc.audio === 'mp4a.40.2' ? 'aac' : (enc.container === 'mp4' ? 'opus' : 'A_OPUS'),
+      numberOfChannels: 2, sampleRate: audioBuffer.sampleRate,
+    } : undefined,
+    fastStart: enc.container === 'mp4' ? 'in-memory' : undefined,
+  });
+
+  const errors = [];
+  const videoEncoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: e => errors.push(e),
+  });
+  videoEncoder.configure({
+    codec: enc.video, width: canvas.width, height: canvas.height,
+    framerate: fps, bitrate: enc.bitrate,
+    ...enc.extra,
+  });
+
+  const frameUs = 1e6 / fps;
+  for (let i = 0; i < frames; i++) {
+    if (signal?.aborted) break;
+    renderer.render(ctx, board, i / fps, { assets, quality: 'hd' });
+    const frame = new VideoFrame(canvas, { timestamp: Math.round(i * frameUs), duration: Math.round(frameUs) });
+    // A keyframe every two seconds keeps scrubbing responsive without
+    // inflating the file the way an all-intra stream would.
+    videoEncoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    frame.close();
+
+    // The encoder queue is where memory goes if the renderer outruns it.
+    if (videoEncoder.encodeQueueSize > 12) {
+      while (videoEncoder.encodeQueueSize > 6) await sleep(4);
+    }
+    if (i % 4 === 0) { await nextFrame(); onProgress(i / frames, { frame: i, frames, stage: 'video' }); }
+  }
+  await videoEncoder.flush();
+  videoEncoder.close();
+
+  if (audioBuffer) {
+    const audioEncoder = new AudioEncoder({
+      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      error: e => errors.push(e),
+    });
+    audioEncoder.configure({
+      codec: enc.audio, sampleRate: audioBuffer.sampleRate, numberOfChannels: 2, bitrate: 160000,
+    });
+
+    // AudioData wants interleaved or planar frames; planar f32 matches what an
+    // AudioBuffer already holds, so no conversion beyond the copy.
+    const sr = audioBuffer.sampleRate;
+    const chunkFrames = 4096;
+    const left = audioBuffer.getChannelData(0);
+    const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : left;
+    const fade = Math.round(0.12 * sr);
+    for (let off = 0; off < audioFrames; off += chunkFrames) {
+      const n = Math.min(chunkFrames, audioFrames - off);
+      const data = new Float32Array(n * 2);
+      data.set(left.subarray(off, off + n), 0);
+      data.set(right.subarray(off, off + n), n);
+      for (let i = 0; i < n; i++) {
+        const left2end = audioFrames - (off + i);
+        if (left2end >= fade) break;
+        const g = left2end / fade;
+        data[i] *= g;
+        data[n + i] *= g;
+      }
+      const ad = new AudioData({
+        format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: 2,
+        timestamp: Math.round((off / sr) * 1e6), data,
+      });
+      audioEncoder.encode(ad);
+      ad.close();
+      if (audioEncoder.encodeQueueSize > 20) {
+        while (audioEncoder.encodeQueueSize > 8) await sleep(2);
+      }
+    }
+    await audioEncoder.flush();
+    audioEncoder.close();
+  }
+
+  muxer.finalize();
+  if (errors.length) throw errors[0];
+
+  const mime = enc.container === 'mp4' ? 'video/mp4' : 'video/webm';
+  const blob = new Blob([target.buffer], { type: mime });
+  onProgress(1, { frame: frames, frames, stage: 'done' });
+  return {
+    blob, mime, frames, slowFrames: 0, dropped: 0, stretch: 1, remuxed: null, encoder: 'webcodecs',
+    codec: { codec: enc.video, label: enc.label, ok: enc.ok, audio: !!audioBuffer },
+  };
+}
+
 /**
  * Render a storyboard to a video Blob.
  *
@@ -127,6 +320,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
  *   audio {style,bpm,seed,volume}, onProgress(0..1, stats), signal
  */
 export async function exportVideo(o) {
+  // WebCodecs is strictly better where it exists; MediaRecorder is the
+  // fallback for browsers that don't have it yet.
+  if (webcodecsSupported() && o.encoder !== 'recorder') {
+    try {
+      return await exportVideoFast(o);
+    } catch (err) {
+      if (o.onNotice) o.onNotice(`WebCodecs export failed (${err.message || err}) — falling back to the recorder.`);
+    }
+  }
   const {
     canvas, renderer, board, assets, fps = 30, player, audio,
     onProgress = () => {}, signal,
@@ -287,7 +489,6 @@ export async function exportStills({ canvas, renderer, board, assets, onProgress
 /* Script / captions                                                   */
 /* ------------------------------------------------------------------ */
 
-const stripMarkup = s => String(s ?? '').replace(/\*/g, '');
 
 export function exportScript(board) {
   const lines = [];
