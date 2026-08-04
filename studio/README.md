@@ -113,13 +113,37 @@ whose music stopped a third of the way through.
   claims MP4 when one actually works, falling back to VP9-in-WebM otherwise.
   Nothing is ever labelled `.mp4` unless it really is one.
 - **The completion message reports what's really in the file** — codec, whether
-  an audio track made it in, and the container.
+  an audio track made it in, and the container. The Export panel says which
+  you'll get *before* you render, since it decides where the file can go.
 - Browsers without WebCodecs fall back to the `MediaRecorder` path, which is
   still real time. There the studio paces to the wall clock, skips to the frame
   that is due *now* when it falls behind, and probes what the browser actually
   encodes before trusting an `isTypeSupported` answer for MP4. Keep the tab in
   front — background tabs get throttled. If more than about 15% of frames had to
   be dropped it says so; drop to 720p or 30 fps and re-export.
+
+### Saving it on a phone
+
+`<a download>` is a desktop idea. On iOS it cannot put anything in Photos at
+all, and for a `blob:` URL it often previews the file instead of saving it —
+which is exactly what "I can't save the video" looks like. So where the browser
+supports it, the studio hands the file to the OS share sheet instead
+(`navigator.share` with a `File`), which is the only route to **Save Video** and
+**Save to Files**.
+
+Two things follow from how iOS works, and both are deliberate:
+
+- **The save is a separate tap.** iOS only honours `navigator.share` while the
+  gesture that triggered it is still active — a few seconds. A render takes far
+  longer, so sharing straight off the Export button always fails. The export
+  drops the clip into the Library and opens the player; **Save video** there
+  carries its own fresh gesture. On desktop there's no such rule, so the
+  download still fires immediately.
+- **Photos only accepts H.264 in an MP4.** A VP9 WebM will save to Files and
+  play in a browser, but it will never appear in the camera roll and most social
+  apps will reject the upload. Safari, and Chrome on a Mac or iPhone, encode
+  H.264; some Linux Chromium builds cannot, and the studio says so rather than
+  handing you a file that quietly won't save.
 
 The two muxers that turn encoded chunks into a playable file are vendored under
 `js/vendor/` — see the README there.

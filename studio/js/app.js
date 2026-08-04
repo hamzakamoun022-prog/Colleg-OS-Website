@@ -15,6 +15,7 @@ import {
 import {
   exportVideo, exportStills, exportScript, exportCaptions, exportAudio,
   download, slug, extForMime, pickMimeType, cutTimes,
+  saveVideo, canShareFile, savesToPhotos, pickEncoding, webcodecsSupported,
 } from './export.js';
 import { clamp, fmtTime, uid } from './util.js';
 
@@ -178,15 +179,15 @@ function buildControls() {
   buildSeg($('formatSeg'),
     Object.entries(FORMATS).map(([k, v]) => [k, k, v.label]),
     state.brief.format,
-    v => { state.brief.format = v; onFormatChange(); savePrefs(); });
+    v => { state.brief.format = v; onFormatChange(); savePrefs(); reportEncoding(); });
 
   buildSeg($('qualitySeg'),
     Object.entries(QUALITY).map(([k, v]) => [k, v.label]),
     state.quality,
-    v => { state.quality = v; savePrefs(); });
+    v => { state.quality = v; savePrefs(); updateTopStat(); reportEncoding(); });
 
   buildSeg($('fpsSeg'), [[30, '30 fps'], [60, '60 fps']], state.fps,
-    v => { state.fps = Number(v); savePrefs(); });
+    v => { state.fps = Number(v); savePrefs(); updateTopStat(); reportEncoding(); });
 
   const chips = $('featureChips');
   chips.innerHTML = '';
@@ -487,6 +488,30 @@ function syncVoiceUI() {
   $('voiceSystem').hidden = m !== 'system';
   $('voiceTrack').hidden = m !== 'track';
   $('voiceMix').hidden = m !== 'track';
+}
+
+/**
+ * Say what this browser will actually produce, before a long render rather
+ * than after it. Whether a file reaches the camera roll is decided entirely
+ * here — Photos takes H.264 and nothing else — so it is worth knowing up front.
+ */
+async function reportEncoding() {
+  const box = $('codecMsg');
+  if (!box) return;
+  const f = FORMATS[state.brief.format];
+  const scale = QUALITY[state.quality].scale;
+  const enc = await pickEncoding(Math.round(f.w * scale), Math.round(f.h * scale), state.fps);
+
+  if (!enc) {
+    box.innerHTML = webcodecsSupported()
+      ? 'This browser could not configure a video encoder. Export will fall back to recording.'
+      : 'No WebCodecs here — export falls back to real-time recording, which is slower and can drop frames.';
+    return;
+  }
+  box.innerHTML = enc.ok
+    ? `<b style="color:var(--good)">H.264 MP4</b> — saves straight to Photos and uploads anywhere.`
+    : `<b style="color:var(--bad)">${enc.label} WebM</b> — this browser can't encode H.264. `
+      + 'The file will save to Files but not to Photos. Safari, or Chrome on a Mac or iPhone, can.';
 }
 
 function setVolumeUI() {
@@ -895,7 +920,16 @@ function openLightbox(item) {
   v.src = item.url;
   box.hidden = false;
   v.play().catch(() => { /* the controls are right there */ });
-  $('lbDownload').onclick = () => download(item.blob, item.filename);
+  const btn = $('lbDownload');
+  btn.textContent = canShareFile(item.blob, item.filename) ? '⤓ Save video' : '⬇ Download';
+  btn.onclick = async () => {
+    const how = await saveVideo(item.blob, item.filename);
+    if (how === 'shared') toast('Saved.', 'ok');
+    else if (how === 'downloaded' && !savesToPhotos(item.codec)) {
+      toast(`Downloaded. This file is ${item.codecLabel} — it will save to Files but not to `
+        + 'Photos; only H.264 in an MP4 goes into the camera roll.', 'err');
+    }
+  };
 }
 
 function closeLightbox() {
@@ -996,7 +1030,6 @@ async function doExportVideo() {
 
     const ext = extForMime(mime);
     const name = `collegeos-${slug(state.board.title)}-${state.brief.format.replace(':', 'x')}.${ext}`;
-    download(blob, name);
     const mb = (blob.size / 1048576).toFixed(1);
     $('exportMsg').textContent =
       `Done — ${mb} MB, ${codec.label}${codec.audio ? ' + audio' : ', no audio track'} in ${ext.toUpperCase()}`;
@@ -1010,24 +1043,52 @@ async function doExportVideo() {
       blob,
       url: URL.createObjectURL(blob),
       filename: name,
-      codecLabel: `${codec.label}${codec.audio ? ' + Opus audio' : ' (silent)'}`,
+      codec,
+      codecLabel: `${codec.label}${codec.audio ? ' with audio' : ' (silent)'}`,
       poster: libPoster(state.board, state.brief.format),
     });
     showStrip('library');
 
-    if (!codec.audio && state.brief.music !== 'none') {
-      toast('Exported, but no audio track made it into the file. Play it once in the Library — if it is silent there too, the browser blocked the score.', 'err');
-    } else if (dropped > frames * 0.15) {
-      toast(`Exported at full length and in sync, but this machine could only render ${frames - dropped} of ${frames} frames in real time — the motion will judder. Drop to 720p or 30 fps for a smooth file.`, 'err');
-    } else if (slowFrames > frames * 0.1) {
-      toast(`Exported, but ${slowFrames} frames rendered slower than real time. Drop to 30 fps or 1080p for a cleaner file.`, 'err');
-    } else if (encoder === 'webcodecs' && codec.ok) {
-      toast(`Exported ${name} — ${mb} MB, H.264 MP4 with audio, every frame encoded. It's in the Library below.`, 'ok');
-    } else if (remuxed) {
-      toast(`Exported ${name} — ${mb} MB. Your browser claimed MP4 but encodes ${remuxed.actual}, which most players will not open from a .mp4 file, so the studio wrote a real .webm instead. It plays with sound; re-encode to H.264 if an ad platform insists on MP4.`, 'err');
+    // Saving has to come from its own tap. iOS only honours navigator.share
+    // while the gesture that triggered it is still "active" — a few seconds —
+    // and a render takes far longer than that, so sharing straight off the
+    // Export button always fails. Open the player instead and let the Save
+    // button there carry a fresh gesture. Desktops have no such rule, so a
+    // plain download still fires immediately.
+    let how = 'downloaded';
+    if (canShareFile(blob, name)) {
+      openLightbox(state.library[0]);
+      how = 'ready';
     } else {
-      toast(`Exported ${name} — ${mb} MB, ${codec.label} with audio. It's in the Library below.`, 'ok');
+      download(blob, name);
     }
+
+    // One warning if something is genuinely wrong with the file, then one line
+    // saying where it went. Chaining these as a single if/else let a success
+    // message hide a dropped-frame count.
+    const problem =
+      !savesToPhotos(codec)
+        ? `This file is ${codec.label}, not H.264. Photos and most social apps only take `
+          + 'H.264 in an MP4, so it will save to Files but never appear in your camera roll. '
+          + 'Safari and Chrome on a Mac or iPhone can encode H.264 — this browser cannot.'
+      : !codec.audio && state.brief.music !== 'none'
+        ? 'No audio track made it into the file. Play it once in the Library — if it is silent '
+          + 'there too, the browser blocked the score.'
+      : dropped > frames * 0.15
+        ? `Only ${frames - dropped} of ${frames} frames could be rendered in real time, so the `
+          + 'motion will judder. Drop to 720p or 30 fps for a smooth file.'
+      : slowFrames > frames * 0.1
+        ? `${slowFrames} frames rendered slower than real time. Drop to 30 fps or 1080p for a `
+          + 'cleaner file.'
+      : remuxed
+        ? `Your browser claimed MP4 but encodes ${remuxed.actual}, which most players will not `
+          + 'open from a .mp4, so the studio wrote a real .webm instead.'
+      : null;
+
+    toast(`${how === 'ready' ? 'Ready' : 'Downloaded'} — ${name}, ${mb} MB, `
+      + `${codec.label}${codec.audio ? ' with audio' : ''}.`
+      + (how === 'ready' ? ' Tap Save video to put it in Photos.' : ''), 'ok');
+    if (problem) toast(problem, 'err');
   } catch (err) {
     console.error(err);
     toast(`Export failed: ${err.message || err}`, 'err');
@@ -1183,6 +1244,7 @@ async function boot() {
 
   setVolumeUI();
   buildVoiceControls();
+  reportEncoding();
   renderLibrary();
   showStrip('timeline');
   rafId = requestAnimationFrame(loop);
