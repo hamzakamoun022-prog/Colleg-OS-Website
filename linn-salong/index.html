@@ -3,34 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Linn Salong — Frisörsalong</title>
-<meta name="description" content="Linn Salong är en frisörsalong där klippning, färg och slingor görs med omsorg. Boka tid online.">
+<title>Linn Salong — Frisör &amp; nagelsalong i Säffle</title>
+<meta name="description" content="Linn Salong på Västra Storgatan 13 i Säffle. Klippning, färg, slingor, permanent, skägg, bryn och naglar. Ring eller SMS:a 070-057 48 52.">
 <meta name="theme-color" content="#F8F4EF">
 
-<!-- Öppna grafen (visas när länken delas på Facebook, Instagram, iMessage m.m.) -->
+<!-- Öppna grafen (visas när länken delas på Facebook, TikTok, iMessage m.m.) -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Linn Salong — Frisörsalong">
-<meta property="og:description" content="Klippning, färg och slingor med omsorg. Boka tid online.">
+<meta property="og:title" content="Linn Salong — Frisör &amp; nagelsalong i Säffle">
+<meta property="og:description" content="Klippning, färg, skägg och naglar mitt i Säffle. Ring eller SMS:a 070-057 48 52.">
 <meta property="og:locale" content="sv_SE">
 
 <!--
   ============================================================
-  ANPASSA HÄR — allt du behöver ändra finns på dessa ställen.
-  Sök (Ctrl+F / Cmd+F) efter texten inom hakparentes.
+  ANPASSA HÄR
 
-  1. [BOKA]     — Bokadirekt-länken. Finns på 4 ställen.
-                  Byt https://www.bokadirekt.se/ mot din egen sida,
-                  t.ex. https://www.bokadirekt.se/places/linn-salong-12345
-  2. [ADRESS]   — Gatuadress, postnummer och ort.
-  3. [TELEFON]  — Telefonnummer (både texten och tel:-länken).
-  4. [EPOST]    — E-postadress (både texten och mailto:-länken).
-  5. [TIDER]    — Öppettider. Finns på 2 ställen (topplisten + kontakt).
-  6. [PRIS]     — Prislistan. Ändra fritt, lägg till/ta bort rader.
-  7. [SOCIALT]  — Länkar till Instagram och Facebook.
-  8. [OMDÖME]   — Kundomdömen. Byt mot riktiga citat.
-  9. [BILD]     — Bildrutorna. Se instruktionen i README.md för hur du
-                  lägger in egna foton (det tar ca 1 minut per bild).
-  10. [KARTA]   — Google Maps-kartan. Se README.md.
+  Uppgifterna nedan är hämtade från salongens offentliga
+  uppgifter (Google/Facebook) i augusti 2026:
+
+    Adress   Västra Storgatan 13, 661 30 Säffle
+    Telefon  070-057 48 52
+    Facebook facebook.com/linnsalong
+    TikTok   tiktok.com/@linnsalong
+    Tider    Dagtid 10–18, kväll tis–fre 20–23, lör 20–02
+             [TIDER] Kontrollera dessa — de kommer från
+             Facebook-sidan och kan vara inaktuella.
+
+  Följande gick INTE att bekräfta och måste fyllas i av er.
+  Sök (Ctrl+F / Cmd+F) efter texten inom hakparentes:
+
+    [PRIS]    Alla priser står som "Ring för pris".
+              Byt siffra för siffra när ni bestämt er.
+    [BILD]    Bildrutorna väntar på riktiga foton.
+              Se README.md — det tar ca en minut per bild.
+    [EPOST]   Ingen e-postadress hittad. Vill ni ha med en
+              finns förberedd kod i kontaktavsnittet.
+    [BOKA]    Ingen Bokadirekt-sida hittades, så alla
+              bokningsknappar ringer eller SMS:ar i stället.
+              Har ni Bokadirekt? Byt länkarna, de är märkta.
+    [OMDÖME]  Inga verifierade kundomdömen. Har ni citat ni
+              får använda finns förberedd kod längst ned.
   ============================================================
 -->
 
@@ -89,8 +100,8 @@
   .wrap { width: 100%; max-width: 1160px; margin: 0 auto; padding: 0 28px; }
 
   /* ---------- Typografi ---------- */
-  h1, h2, h3 { font-family: var(--serif); font-weight: 300; line-height: 1.1; color: var(--espresso); }
-  h1 { font-size: clamp(46px, 8vw, 92px); letter-spacing: -0.5px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 300; line-height: 1.1; color: var(--espresso); text-wrap: balance; }
+  h1 { font-size: clamp(44px, 7.4vw, 86px); letter-spacing: -0.5px; }
   h2 { font-size: clamp(34px, 5vw, 54px); }
   h3 { font-size: 22px; font-weight: 500; }
   em { font-style: italic; color: var(--clay); }
@@ -117,7 +128,7 @@
   .btn-primary:hover { background: var(--clay); transform: translateY(-2px); box-shadow: var(--shadow-md); }
   .btn-ghost { background: transparent; color: var(--espresso); border-color: var(--sand-deep); }
   .btn-ghost:hover { background: var(--sand); border-color: var(--clay); transform: translateY(-2px); }
-  .btn svg { width: 15px; height: 15px; }
+  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   /* ---------- Navigation ---------- */
   nav {
@@ -200,12 +211,8 @@
     padding: 7px 17px; border-radius: 100px; font-size: 13px; color: var(--espresso);
     margin-bottom: 30px;
   }
-  .badge .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--clay);
-  }
-  .hero p.lead {
-    font-size: 18px; color: var(--muted); max-width: 460px; margin: 26px 0 40px;
-  }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--clay); }
+  .hero p.lead { font-size: 18px; color: var(--muted); max-width: 470px; margin: 26px 0 40px; }
   .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
   .hero-note { margin-top: 30px; font-size: 14px; color: var(--muted); }
   .hero-note strong { font-weight: 500; color: var(--espresso); }
@@ -223,9 +230,7 @@
     color: var(--clay); text-align: center; padding: 24px;
   }
   .photo-label svg { width: 30px; height: 30px; opacity: .55; }
-  .photo-label span {
-    font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .85;
-  }
+  .photo-label span { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
   .hero-photo { aspect-ratio: 4 / 5; }
 
   /* ---------- Bandet under hero ---------- */
@@ -235,6 +240,8 @@
   }
   .strip-item { display: flex; align-items: center; gap: 11px; font-size: 14px; }
   .strip-item svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--clay); }
+  .strip-item a { color: var(--white); text-decoration: none; border-bottom: 1px solid rgba(255,253,250,.3); }
+  .strip-item a:hover { border-color: var(--clay); }
   .strip-item strong { font-weight: 400; color: var(--white); }
 
   /* ---------- Tjänster ---------- */
@@ -243,14 +250,9 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px;
     background: var(--line); border: 1px solid var(--line);
   }
-  .service {
-    background: var(--white); padding: 44px 36px 40px;
-    transition: background .3s ease, transform .3s ease;
-  }
+  .service { background: var(--white); padding: 40px 36px; transition: background .3s ease; }
   .service:hover { background: var(--ivory); }
-  .service .num {
-    font-family: var(--serif); font-size: 15px; color: var(--clay); display: block; margin-bottom: 22px;
-  }
+  .service svg { width: 24px; height: 24px; color: var(--clay); margin-bottom: 20px; }
   .service h3 { margin-bottom: 12px; }
   .service p { color: var(--muted); font-size: 15.5px; }
 
@@ -272,7 +274,9 @@
   .price-row .dots { flex: 1; border-bottom: 1px dotted var(--sand-deep); transform: translateY(-4px); }
   .price-row .amt {
     font-family: var(--serif); font-size: 20px; color: var(--espresso); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
+  .price-row .amt.ask { font-family: var(--sans); font-size: 14px; color: var(--muted); }
   .price-foot {
     margin-top: 46px; padding: 26px 30px; background: var(--sand);
     border-radius: 4px; font-size: 14.5px; color: var(--muted);
@@ -285,32 +289,30 @@
   .about-grid { display: grid; grid-template-columns: .95fr 1.05fr; gap: 72px; align-items: center; }
   .about-photo { aspect-ratio: 1 / 1; }
   .about p { color: var(--muted); font-size: 17px; margin-top: 22px; }
-  .about .sign {
-    margin-top: 32px; font-family: var(--serif); font-style: italic;
-    font-size: 26px; color: var(--clay);
+  .about .sign { margin-top: 32px; font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--clay); }
+  .tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+  .tag {
+    border: 1px solid var(--sand-deep); background: var(--ivory);
+    padding: 7px 16px; border-radius: 100px; font-size: 13.5px; color: var(--espresso);
   }
-  .facts { display: flex; gap: 48px; margin-top: 42px; flex-wrap: wrap; }
-  .fact .n { font-family: var(--serif); font-size: 42px; color: var(--espresso); line-height: 1; }
-  .fact .t { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
 
   /* ---------- Galleri ---------- */
   .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .gallery-grid .photo { aspect-ratio: 1 / 1; }
   .gallery-grid .photo.tall { grid-row: span 2; aspect-ratio: 1 / 2.06; }
 
-  /* ---------- Omdömen ---------- */
-  .reviews { background: var(--sand); }
-  .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
-  .review {
-    background: var(--white); padding: 38px 34px; border-radius: 4px; box-shadow: var(--shadow-sm);
-    display: flex; flex-direction: column;
+  /* ---------- Sociala medier ---------- */
+  .social-band { background: var(--sand); }
+  .social-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; max-width: 760px; margin: 0 auto; }
+  .social-card {
+    background: var(--white); border-radius: 4px; padding: 34px 30px; text-decoration: none;
+    display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow-sm);
+    transition: transform .25s ease, box-shadow .25s ease;
   }
-  .stars { color: var(--clay); letter-spacing: 3px; font-size: 14px; margin-bottom: 20px; }
-  .review blockquote {
-    font-family: var(--serif); font-size: 21px; line-height: 1.45; color: var(--espresso);
-    flex: 1;
-  }
-  .review .who { margin-top: 24px; font-size: 14px; color: var(--muted); }
+  .social-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .social-card svg { width: 26px; height: 26px; color: var(--clay); flex-shrink: 0; }
+  .social-card .t { font-family: var(--serif); font-size: 21px; color: var(--espresso); }
+  .social-card .s { font-size: 14px; color: var(--muted); }
 
   /* ---------- Kontakt ---------- */
   .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; }
@@ -322,6 +324,7 @@
   .info-block a { color: var(--espresso); text-decoration: none; border-bottom: 1px solid var(--sand-deep); }
   .info-block a:hover { border-color: var(--clay); color: var(--clay); }
   .info-block p { font-size: 17px; color: var(--ink); }
+  .info-block .big { font-family: var(--serif); font-size: 30px; }
   .hours { list-style: none; }
   .hours li {
     display: flex; justify-content: space-between; gap: 20px;
@@ -331,16 +334,16 @@
   .hours .day { color: var(--muted); }
   .hours .closed { color: var(--muted); font-style: italic; }
   .map { aspect-ratio: 4 / 3; border-radius: 4px; overflow: hidden; }
-  .map iframe { width: 100%; height: 100%; border: 0; }
+  .map iframe { width: 100%; height: 100%; border: 0; display: block; }
 
-  .cta-band {
-    background: var(--espresso); color: var(--sand); text-align: center;
-    padding: clamp(70px, 9vw, 110px) 0;
-  }
+  .cta-band { background: var(--espresso); color: var(--sand); text-align: center; padding: clamp(70px, 9vw, 110px) 0; }
   .cta-band h2 { color: var(--white); }
-  .cta-band p { color: rgba(239,230,218,.7); max-width: 480px; margin: 20px auto 38px; }
+  .cta-band p { color: rgba(239,230,218,.7); max-width: 500px; margin: 20px auto 38px; }
   .cta-band .btn-primary { background: var(--clay); color: var(--white); }
   .cta-band .btn-primary:hover { background: var(--sand); color: var(--espresso); }
+  .cta-band .btn-ghost { color: var(--sand); border-color: rgba(239,230,218,.35); }
+  .cta-band .btn-ghost:hover { background: rgba(239,230,218,.1); border-color: var(--sand); color: var(--white); }
+  .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
   /* ---------- Sidfot ---------- */
   footer { background: var(--ink); color: rgba(239,230,218,.62); padding: 64px 0 34px; font-size: 14.5px; }
@@ -391,8 +394,7 @@
     .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .gallery-grid .photo.tall { grid-row: span 1; aspect-ratio: 1 / 1; }
     .strip .wrap { flex-direction: column; align-items: flex-start; gap: 14px; }
-    .facts { gap: 32px; }
-    .hero-btns .btn { flex: 1 1 100%; }
+    .hero-btns .btn, .cta-btns .btn { flex: 1 1 100%; }
     .price-foot { flex-direction: column; align-items: flex-start; }
   }
 </style>
@@ -412,8 +414,8 @@
         <li><a href="#galleri">Galleri</a></li>
         <li><a href="#kontakt">Kontakt</a></li>
       </ul>
-      <!-- [BOKA] 1 av 4 -->
-      <a class="btn btn-primary" href="https://www.bokadirekt.se/" target="_blank" rel="noopener">Boka tid</a>
+      <!-- [BOKA] 1 av 4 — byt href till er Bokadirekt-sida om ni skaffar en -->
+      <a class="btn btn-primary" href="tel:+46700574852">Ring &amp; boka</a>
       <button class="burger" id="burger" aria-label="Meny" aria-expanded="false" aria-controls="mobile-menu">
         <span></span><span></span><span></span>
       </button>
@@ -428,7 +430,7 @@
   <a href="#galleri">Galleri</a>
   <a href="#kontakt">Kontakt</a>
   <!-- [BOKA] 2 av 4 -->
-  <a class="btn btn-primary" href="https://www.bokadirekt.se/" target="_blank" rel="noopener">Boka tid</a>
+  <a class="btn btn-primary" href="tel:+46700574852">Ring &amp; boka</a>
 </div>
 
 <main id="main">
@@ -438,28 +440,30 @@
     <div class="wrap">
       <div class="hero-grid">
         <div>
-          <span class="badge"><span class="dot"></span> Frisörsalong &middot; Boka online dygnet runt</span>
-          <h1>Ditt hår,<br><em>vårt hantverk.</em></h1>
+          <span class="badge"><span class="dot"></span> Frisör &amp; nagelsalong i Säffle</span>
+          <h1>Hår, skägg och naglar<br><em>mitt i Säffle.</em></h1>
           <p class="lead">
-            Klippning, färg och slingor i lugn takt. Vi tar oss tid att förstå
-            vad du vill ha — och ser till att det håller sig fint långt efter
-            att du gått härifrån.
+            Linn Salong ligger på Västra Storgatan 13. Klippning, färg, slingor,
+            permanent, skägg, bryn och naglar — allt under samma tak. Ring eller
+            skicka ett SMS så hittar vi en tid som passar.
           </p>
           <div class="hero-btns">
             <!-- [BOKA] 3 av 4 -->
-            <a class="btn btn-primary" href="https://www.bokadirekt.se/" target="_blank" rel="noopener">
-              Boka tid online
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+            <a class="btn btn-primary" href="tel:+46700574852">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h3l1.5 4.5-2 1.5a12 12 0 006 6l1.5-2L21 14.5v3a2 2 0 01-2.2 2A16.5 16.5 0 014 5.2 2 2 0 016 3z"/></svg>
+              Ring 070-057 48 52
             </a>
-            <a class="btn btn-ghost" href="#priser">Se prislistan</a>
+            <a class="btn btn-ghost" href="sms:+46700574852">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.4A8 8 0 1121 12z"/></svg>
+              SMS:a oss
+            </a>
           </div>
           <p class="hero-note">
-            <!-- [TELEFON] -->
-            Hellre prata? Ring <strong><a href="tel:+46101234567" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--sand-deep)">010-123 45 67</a></strong>
+            Hittar du hit? <strong>Västra Storgatan 13</strong>, mitt i centrum.
           </p>
         </div>
 
-        <!-- [BILD] Hero-bild — helst en ljus bild från salongen -->
+        <!-- [BILD] Hero-bild — helst en ljus bild inifrån salongen -->
         <div class="photo hero-photo">
           <div class="photo-label">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg>
@@ -473,19 +477,18 @@
   <!-- ============ BAND ============ -->
   <div class="strip">
     <div class="wrap">
-      <!-- [TIDER] 1 av 2 -->
-      <div class="strip-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <span>Mån–fre <strong>10–18</strong> &middot; Lör <strong>10–15</strong></span>
-      </div>
-      <!-- [ADRESS] -->
       <div class="strip-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-        <span><strong>Storgatan 12</strong>, 123 45 Staden</span>
+        <span><strong>Västra Storgatan 13</strong>, 661 30 Säffle</span>
       </div>
       <div class="strip-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6-4.5-4.2 6.1-.8z"/></svg>
-        <span><strong>Erfarna frisörer</strong> &middot; kvalitetsprodukter</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h3l1.5 4.5-2 1.5a12 12 0 006 6l1.5-2L21 14.5v3a2 2 0 01-2.2 2A16.5 16.5 0 014 5.2 2 2 0 016 3z"/></svg>
+        <span>Ring eller SMS:a <a href="tel:+46700574852">070-057 48 52</a></span>
+      </div>
+      <!-- [TIDER] -->
+      <div class="strip-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span>Dagtid <strong>10–18</strong> &middot; kvällar tis–lör</span>
       </div>
     </div>
   </div>
@@ -501,34 +504,34 @@
 
       <div class="service-grid reveal">
         <article class="service">
-          <span class="num">01</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.7L20 18M8.2 16.3L20 6"/></svg>
           <h3>Klippning</h3>
-          <p>Konsultation, tvätt, klippning och fönning. Vi utgår från hårets fall och hur mycket tid du vill lägga hemma.</p>
+          <p>Dam, herr och barn. Konsultation, tvätt, klippning och fönning — vi utgår från hårets fall och hur mycket tid du vill lägga hemma.</p>
         </article>
         <article class="service">
-          <span class="num">02</span>
-          <h3>Färg &amp; toning</h3>
-          <p>Helfärg, ansatsfärg eller en toning som fräschar upp glansen. Alltid med hänsyn till hårets kondition.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 3s6 6 6 10a6 6 0 01-12 0c0-4 6-10 6-10z"/></svg>
+          <h3>Färg &amp; slingor</h3>
+          <p>Helfärg, ansatsfärg, slingor och toning. Alltid med hänsyn till hårets kondition, och alltid ett pris innan vi börjar.</p>
         </article>
         <article class="service">
-          <span class="num">03</span>
-          <h3>Slingor &amp; balayage</h3>
-          <p>Mjuka ljusa partier som växer ut snyggt — folieslingor, balayage eller babylights beroende på vad du vill ha.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 3c0 3 8 3 8 6s-8 3-8 6 8 3 8 6"/></svg>
+          <h3>Permanent &amp; flätor</h3>
+          <p>Lockar som håller, eller flätor lagda efter ditt huvud. Säg till hur länge de ska sitta så anpassar vi tekniken.</p>
         </article>
         <article class="service">
-          <span class="num">04</span>
-          <h3>Behandlingar</h3>
-          <p>Återfuktande inpackningar och reparerande behandlingar för torrt, slitet eller nyfärgat hår.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5 5v6a7 7 0 0014 0V5"/><path d="M9 19h6"/></svg>
+          <h3>Skägg</h3>
+          <p>Trimning och formning, med rakkniv om du vill. Går bra att lägga till på en klippning.</p>
         </article>
         <article class="service">
-          <span class="num">05</span>
-          <h3>Uppsättning &amp; styling</h3>
-          <p>Till bröllop, bal eller fest. Vi bokar gärna ett provtillfälle innan den stora dagen.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 12S6 7 12 7s9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          <h3>Bryn &amp; ansikte</h3>
+          <p>Plockning, färgning och form på brynen. Ansiktsmask när huden behöver lite extra.</p>
         </article>
         <article class="service">
-          <span class="num">06</span>
-          <h3>Herr &amp; barn</h3>
-          <p>Klippning för hela familjen, med eller utan maskin. Skäggtrim går bra att lägga till.</p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="8" y="3" width="8" height="18" rx="4"/><path d="M8 9h8"/></svg>
+          <h3>Naglar</h3>
+          <p>Manikyr, pedikyr, gellack och förlängning. Boka gärna ihop med en klippning så gör vi allt på ett besök.</p>
         </article>
       </div>
     </div>
@@ -540,49 +543,59 @@
       <div class="section-head reveal">
         <span class="eyebrow">Prislista</span>
         <h2>Priser</h2>
-        <p>Priserna nedan är riktpriser. Långt eller mycket hår kan kosta något mer — du får alltid ett pris innan vi börjar.</p>
+        <p>Priset beror på hårets längd och tjocklek, så ring gärna så säger vi vad just din behandling kostar. Du får alltid priset innan vi sätter igång.</p>
       </div>
 
-      <!-- [PRIS] Ändra fritt. Kopiera en .price-row för att lägga till en rad. -->
+      <!--
+        [PRIS] Byt ut "Ring för pris" mot riktiga siffror så här:
+            <div class="amt">650 kr</div>
+        Ta bort class="ask" när du skriver in ett pris — den gör
+        texten liten och grå, vilket bara passar "Ring för pris".
+        Kopiera en hel .price-row för att lägga till en rad.
+      -->
       <div class="price-cols reveal">
         <div>
           <div class="price-group">
             <h3>Klippning</h3>
             <div class="price-row">
               <div class="name">Klippning dam <small>inkl. tvätt och fön</small></div>
-              <div class="dots"></div><div class="amt">650 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
               <div class="name">Klippning herr</div>
-              <div class="dots"></div><div class="amt">450 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Barnklippning <small>t.o.m. 12 år</small></div>
-              <div class="dots"></div><div class="amt">350 kr</div>
+              <div class="name">Barnklippning</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
               <div class="name">Putsning av lugg</div>
-              <div class="dots"></div><div class="amt">150 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
               <div class="name">Skäggtrim</div>
-              <div class="dots"></div><div class="amt">250 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
           </div>
 
           <div class="price-group">
-            <h3>Styling</h3>
+            <h3>Naglar</h3>
             <div class="price-row">
-              <div class="name">Fönning</div>
-              <div class="dots"></div><div class="amt">350 kr</div>
+              <div class="name">Manikyr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Uppsättning</div>
-              <div class="dots"></div><div class="amt">från 900 kr</div>
+              <div class="name">Pedikyr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Brudpaket <small>provuppsättning + bröllopsdagen</small></div>
-              <div class="dots"></div><div class="amt">från 2 500 kr</div>
+              <div class="name">Gellack</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
+            </div>
+            <div class="price-row">
+              <div class="name">Nagelförlängning</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
           </div>
         </div>
@@ -592,52 +605,48 @@
             <h3>Färg</h3>
             <div class="price-row">
               <div class="name">Ansatsfärg</div>
-              <div class="dots"></div><div class="amt">från 950 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
               <div class="name">Helfärg</div>
-              <div class="dots"></div><div class="amt">från 1 250 kr</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Toning / glossing</div>
-              <div class="dots"></div><div class="amt">från 650 kr</div>
+              <div class="name">Toning</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Slingor halvhuvud</div>
-              <div class="dots"></div><div class="amt">från 1 450 kr</div>
+              <div class="name">Slingor</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Slingor helhuvud</div>
-              <div class="dots"></div><div class="amt">från 1 850 kr</div>
-            </div>
-            <div class="price-row">
-              <div class="name">Balayage</div>
-              <div class="dots"></div><div class="amt">från 2 200 kr</div>
+              <div class="name">Permanent</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
           </div>
 
           <div class="price-group">
-            <h3>Behandlingar</h3>
+            <h3>Övrigt</h3>
             <div class="price-row">
-              <div class="name">Inpackning</div>
-              <div class="dots"></div><div class="amt">350 kr</div>
+              <div class="name">Flätor</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Reparerande behandling</div>
-              <div class="dots"></div><div class="amt">från 500 kr</div>
+              <div class="name">Bryn <small>plockning och färg</small></div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
             <div class="price-row">
-              <div class="name">Permanent</div>
-              <div class="dots"></div><div class="amt">från 1 600 kr</div>
+              <div class="name">Ansiktsmask</div>
+              <div class="dots"></div><div class="amt ask">Ring för pris</div>
             </div>
           </div>
         </div>
       </div>
 
       <div class="price-foot reveal">
-        <p>Behöver du hjälp att välja? Ring oss så resonerar vi ihop — det är oftast enklare än att gissa i bokningen.</p>
+        <p>Osäker på vad du vill ha? Ring så resonerar vi ihop — det är oftast enklare än att gissa.</p>
         <!-- [BOKA] 4 av 4 -->
-        <a class="btn btn-primary" href="https://www.bokadirekt.se/" target="_blank" rel="noopener">Boka tid</a>
+        <a class="btn btn-primary" href="tel:+46700574852">Ring 070-057 48 52</a>
       </div>
     </div>
   </section>
@@ -658,29 +667,26 @@
           <span class="eyebrow">Om oss</span>
           <h2>En salong med<br><em>gott om tid</em></h2>
           <p>
-            Linn Salong är en liten salong där vi hellre tar en kund för mycket i tid
-            än en för många på en dag. Det märks: du får sitta ner, bli lyssnad på och
-            gå härifrån med ett hår som funkar även på en vanlig tisdag.
+            Linn Salong är en liten salong på Västra Storgatan i Säffle, där vi
+            hellre tar en kund för mycket i tid än en för många på en dag. Det
+            märks: du får sitta ner, bli lyssnad på och gå härifrån med ett
+            resultat som funkar även på en vanlig tisdag.
           </p>
           <p>
-            Vi arbetar med produkter vi själva tror på och berättar gärna vad som
-            faktiskt behövs — och vad som inte gör det.
+            Hos oss gör vi både hår, skägg och naglar, så du slipper springa
+            mellan olika ställen. Vi berättar gärna vad som faktiskt behövs —
+            och vad som inte gör det.
           </p>
           <p class="sign">Välkommen in!</p>
 
-          <div class="facts">
-            <div class="fact">
-              <div class="n">15+</div>
-              <div class="t">År i branschen</div>
-            </div>
-            <div class="fact">
-              <div class="n">4,9</div>
-              <div class="t">Snittbetyg</div>
-            </div>
-            <div class="fact">
-              <div class="n">100%</div>
-              <div class="t">Egen tid per kund</div>
-            </div>
+          <div class="tags">
+            <span class="tag">Klippning</span>
+            <span class="tag">Färg &amp; slingor</span>
+            <span class="tag">Permanent</span>
+            <span class="tag">Flätor</span>
+            <span class="tag">Skägg</span>
+            <span class="tag">Bryn</span>
+            <span class="tag">Naglar</span>
           </div>
         </div>
       </div>
@@ -693,10 +699,10 @@
       <div class="section-head center reveal">
         <span class="eyebrow">Galleri</span>
         <h2>Arbeten</h2>
-        <p>Ett urval av klippningar och färgningar. Fler bilder finns på vår Instagram.</p>
+        <p>Ett urval av klippningar, färgningar och naglar. Fler bilder och klipp finns på vår Facebook och TikTok.</p>
       </div>
 
-      <!-- [BILD] Galleri — byt varje ruta mot ett foto -->
+      <!-- [BILD] Galleri — byt varje ruta mot ett foto, se README.md -->
       <div class="gallery-grid reveal">
         <div class="photo tall"><div class="photo-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg><span>Bild 1</span></div></div>
         <div class="photo"><div class="photo-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg><span>Bild 2</span></div></div>
@@ -707,31 +713,43 @@
     </div>
   </section>
 
-  <!-- ============ OMDÖMEN ============ -->
-  <section class="section reviews">
+  <!--
+    [OMDÖME] Här fanns tidigare kundomdömen, men de var påhittade
+    och är därför borttagna. Har ni riktiga citat ni får använda?
+    Klistra in det här, ett block per omdöme:
+
+    <figure class="review">
+      <div class="stars" aria-label="5 av 5">★★★★★</div>
+      <blockquote>”Citatet här.”</blockquote>
+      <figcaption class="who">Förnamn</figcaption>
+    </figure>
+  -->
+
+  <!-- ============ SOCIALA MEDIER ============ -->
+  <section class="section social-band">
     <div class="wrap">
       <div class="section-head center reveal">
-        <span class="eyebrow">Omdömen</span>
-        <h2>Vad kunderna säger</h2>
+        <span class="eyebrow">Följ oss</span>
+        <h2>Se vad vi gör</h2>
+        <p>Nya klippningar, färgningar och erbjudanden läggs upp löpande.</p>
       </div>
 
-      <!-- [OMDÖME] Byt mot riktiga citat från Bokadirekt eller Google -->
-      <div class="review-grid reveal">
-        <figure class="review">
-          <div class="stars" aria-label="5 av 5">★★★★★</div>
-          <blockquote>”Första gången på länge som jag går ut från en salong och hittar tillbaka till samma frisyr själv hemma.”</blockquote>
-          <figcaption class="who">Anna, kund sedan 2021</figcaption>
-        </figure>
-        <figure class="review">
-          <div class="stars" aria-label="5 av 5">★★★★★</div>
-          <blockquote>”Lugnt, trevligt och otroligt noggrant. Bästa slingorna jag haft.”</blockquote>
-          <figcaption class="who">Sara</figcaption>
-        </figure>
-        <figure class="review">
-          <div class="stars" aria-label="5 av 5">★★★★★</div>
-          <blockquote>”Tog sig tid att förklara vad håret faktiskt behövde istället för att sälja på mig en massa.”</blockquote>
-          <figcaption class="who">Johan</figcaption>
-        </figure>
+      <!-- [SOCIALT] -->
+      <div class="social-cards reveal">
+        <a class="social-card" href="https://www.facebook.com/linnsalong/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 8.5V7c0-1 .5-1.5 1.6-1.5H17V3h-2.3C12.4 3 11 4.4 11 6.7v1.8H9V11h2v10h3V11h2.2l.4-2.5H14z"/></svg>
+          <span>
+            <span class="t">Facebook</span><br>
+            <span class="s">facebook.com/linnsalong</span>
+          </span>
+        </a>
+        <a class="social-card" href="https://www.tiktok.com/@linnsalong" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 3c.4 2.6 2 4.2 4.6 4.4"/></svg>
+          <span>
+            <span class="t">TikTok</span><br>
+            <span class="s">@linnsalong</span>
+          </span>
+        </a>
       </div>
     </div>
   </section>
@@ -741,45 +759,53 @@
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Hitta hit</span>
-        <h2>Kontakt &amp; öppettider</h2>
+        <h2>Kontakt</h2>
       </div>
 
       <div class="contact-grid">
         <div class="reveal">
           <div class="info-block">
             <h3>Adress</h3>
-            <!-- [ADRESS] -->
-            <p>Storgatan 12<br>123 45 Staden</p>
+            <p>Västra Storgatan 13<br>661 30 Säffle</p>
           </div>
           <div class="info-block">
-            <h3>Telefon</h3>
-            <!-- [TELEFON] -->
-            <p><a href="tel:+46101234567">010-123 45 67</a></p>
+            <h3>Telefon &amp; SMS</h3>
+            <p class="big"><a href="tel:+46700574852">070-057 48 52</a></p>
           </div>
-          <div class="info-block">
-            <h3>E-post</h3>
-            <!-- [EPOST] -->
-            <p><a href="mailto:hej@linnsalong.se">hej@linnsalong.se</a></p>
-          </div>
+
+          <!--
+            [EPOST] Ingen e-postadress hittad. Vill ni ha med en,
+            ta bort kommentarstecknen runt blocket och fyll i adressen:
+
+            <div class="info-block">
+              <h3>E-post</h3>
+              <p><a href="mailto:namn@exempel.se">namn@exempel.se</a></p>
+            </div>
+          -->
+
           <div class="info-block">
             <h3>Öppettider</h3>
-            <!-- [TIDER] 2 av 2 -->
+            <!--
+              [TIDER] Tiderna nedan kommer från salongens Facebook-sida.
+              Stämmer de inte — ändra bara texten här.
+            -->
             <ul class="hours">
-              <li><span class="day">Måndag–onsdag</span> <span>10.00–18.00</span></li>
-              <li><span class="day">Torsdag</span> <span>10.00–19.00</span></li>
-              <li><span class="day">Fredag</span> <span>10.00–18.00</span></li>
-              <li><span class="day">Lördag</span> <span>10.00–15.00</span></li>
-              <li><span class="day">Söndag</span> <span class="closed">Stängt</span></li>
+              <li><span class="day">Dagtid, alla dagar</span> <span>10.00–18.00</span></li>
+              <li><span class="day">Kväll, tisdag–fredag</span> <span>20.00–23.00</span></li>
+              <li><span class="day">Kväll, lördag</span> <span>20.00–02.00</span></li>
             </ul>
+            <p style="margin-top:16px;font-size:15px;color:var(--muted)">
+              Passar ingen av tiderna? Ring eller SMS:a
+              <a href="tel:+46700574852">070-057 48 52</a> så löser vi det.
+            </p>
           </div>
         </div>
 
-        <!-- [KARTA] Se README.md för hur du byter till din riktiga adress -->
         <div class="photo map reveal">
-          <div class="photo-label">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-            <span>Karta</span>
-          </div>
+          <iframe
+            title="Karta till Linn Salong, Västra Storgatan 13 i Säffle"
+            src="https://maps.google.com/maps?q=V%C3%A4stra%20Storgatan%2013%2C%20661%2030%20S%C3%A4ffle&z=16&output=embed"
+            loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
       </div>
     </div>
@@ -788,12 +814,15 @@
   <!-- ============ CTA ============ -->
   <section class="cta-band">
     <div class="wrap reveal">
-      <h2>Redo för något nytt?</h2>
-      <p>Boka din tid online — det tar en halv minut och du ser direkt vilka tider som är lediga.</p>
-      <a class="btn btn-primary" href="https://www.bokadirekt.se/" target="_blank" rel="noopener">
-        Boka tid på Bokadirekt
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
-      </a>
+      <h2>Dags för en ny tid?</h2>
+      <p>Ring eller skicka ett SMS så löser vi det. Vi har ofta tider samma vecka.</p>
+      <div class="cta-btns">
+        <a class="btn btn-primary" href="tel:+46700574852">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h3l1.5 4.5-2 1.5a12 12 0 006 6l1.5-2L21 14.5v3a2 2 0 01-2.2 2A16.5 16.5 0 014 5.2 2 2 0 016 3z"/></svg>
+          Ring 070-057 48 52
+        </a>
+        <a class="btn btn-ghost" href="sms:+46700574852">SMS:a oss</a>
+      </div>
     </div>
   </section>
 
@@ -804,14 +833,14 @@
     <div class="foot-grid">
       <div class="foot-col" style="max-width:280px">
         <a href="#top" class="logo">Linn <span>Salong</span></a>
-        <p style="margin-top:16px">Frisörsalong med tid för varje kund.</p>
+        <p style="margin-top:16px">Frisör, barberare och naglar på Västra Storgatan 13 i Säffle.</p>
         <!-- [SOCIALT] -->
         <div class="socials">
-          <a href="https://instagram.com/" target="_blank" rel="noopener" aria-label="Instagram">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
-          </a>
-          <a href="https://facebook.com/" target="_blank" rel="noopener" aria-label="Facebook">
+          <a href="https://www.facebook.com/linnsalong/" target="_blank" rel="noopener" aria-label="Facebook">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 8.5V7c0-1 .5-1.5 1.6-1.5H17V3h-2.3C12.4 3 11 4.4 11 6.7v1.8H9V11h2v10h3V11h2.2l.4-2.5H14z"/></svg>
+          </a>
+          <a href="https://www.tiktok.com/@linnsalong" target="_blank" rel="noopener" aria-label="TikTok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 11-3.5-3.5"/><path d="M14 3c.4 2.6 2 4.2 4.6 4.4"/></svg>
           </a>
         </div>
       </div>
@@ -830,31 +859,61 @@
       <div class="foot-col">
         <h4>Kontakt</h4>
         <ul>
-          <!-- [ADRESS] [TELEFON] [EPOST] -->
-          <li>Storgatan 12, 123 45 Staden</li>
-          <li><a href="tel:+46101234567">010-123 45 67</a></li>
-          <li><a href="mailto:hej@linnsalong.se">hej@linnsalong.se</a></li>
+          <li>Västra Storgatan 13</li>
+          <li>661 30 Säffle</li>
+          <li><a href="tel:+46700574852">070-057 48 52</a></li>
         </ul>
       </div>
 
+      <!-- [TIDER] -->
       <div class="foot-col">
         <h4>Öppettider</h4>
         <ul>
-          <li>Mån–ons 10–18</li>
-          <li>Tors 10–19</li>
-          <li>Fre 10–18</li>
-          <li>Lör 10–15</li>
-          <li>Sön stängt</li>
+          <li>Dagtid 10–18</li>
+          <li>Kväll tis–fre 20–23</li>
+          <li>Kväll lör 20–02</li>
         </ul>
       </div>
     </div>
 
     <div class="foot-bottom">
       <span>&copy; <span id="year">2026</span> Linn Salong</span>
-      <span>Bokning sker via Bokadirekt</span>
+      <span>Bokning via telefon och SMS</span>
     </div>
   </div>
 </footer>
+
+<!-- Hjälper Google visa rätt uppgifter i sökresultatet -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HairSalon",
+  "name": "Linn Salong",
+  "telephone": "+46700574852",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Västra Storgatan 13",
+    "postalCode": "661 30",
+    "addressLocality": "Säffle",
+    "addressCountry": "SE"
+  },
+  "openingHoursSpecification": [
+    { "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+      "opens": "10:00", "closes": "18:00" },
+    { "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Tuesday","Wednesday","Thursday","Friday"],
+      "opens": "20:00", "closes": "23:00" },
+    { "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "Saturday",
+      "opens": "20:00", "closes": "02:00" }
+  ],
+  "sameAs": [
+    "https://www.facebook.com/linnsalong/",
+    "https://www.tiktok.com/@linnsalong"
+  ]
+}
+</script>
 
 <script>
   // Skugga/kant på navigeringen när sidan scrollas
