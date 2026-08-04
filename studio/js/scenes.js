@@ -756,157 +756,6 @@ function dashboardHub(ctx, W, H, p, o) {
  * @param {number} lw  lid width; everything else derives from it
  * @returns {{screen:{x,y,w,h}, bottom:number}}
  */
-function macbook(ctx, cx, topY, lw, o = {}) {
-  const lh = lw / 1.55;
-  const lx = cx - lw / 2;
-  const alu = o.dark ? '#3A3D42' : '#C8CBD0';
-  const aluDark = o.dark ? '#26282C' : '#A7ABB2';
-  const r = lw * 0.022;
-
-  // --- lid ---
-  withShadow(ctx, rgba('#000000', 0.34), lh * 0.16, lh * 0.06, () => {
-    fillRound(ctx, lx, topY, lw, lh, r, alu);
-  });
-  // Aluminium has a vertical falloff rather than a flat fill.
-  const alug = ctx.createLinearGradient(lx, topY, lx + lw, topY + lh);
-  alug.addColorStop(0, rgba('#FFFFFF', 0.22));
-  alug.addColorStop(0.5, rgba('#FFFFFF', 0));
-  alug.addColorStop(1, rgba('#000000', 0.10));
-  ctx.save();
-  roundRect(ctx, lx, topY, lw, lh, r);
-  ctx.clip();
-  ctx.fillStyle = alug;
-  ctx.fillRect(lx, topY, lw, lh);
-  ctx.restore();
-
-  // --- screen ---
-  const bez = lw * 0.012;
-  const sx = lx + bez;
-  const sy = topY + bez;
-  const sw = lw - bez * 2;
-  const sh = lh - bez * 2 - lw * 0.014; // slightly deeper chin
-  fillRound(ctx, sx - bez * 0.3, sy - bez * 0.3, sw + bez * 0.6, sh + bez * 0.6, r * 0.6, '#0B0B0D');
-
-  ctx.save();
-  roundRect(ctx, sx, sy, sw, sh, r * 0.45);
-  ctx.clip();
-  ctx.fillStyle = P.white;
-  ctx.fillRect(sx, sy, sw, sh);
-  if (o.img) {
-    const ir = o.img.width / o.img.height;
-    const dw = sw;
-    const dh = dw / ir;
-    const scroll = (o.scroll ?? 0) * Math.max(0, dh - sh);
-    ctx.drawImage(o.img, sx, sy - scroll, dw, dh);
-  }
-  // Screen glass: a soft diagonal sheen plus a darker top-left corner.
-  const gl = ctx.createLinearGradient(sx, sy, sx + sw * 0.85, sy + sh);
-  gl.addColorStop(0, 'rgba(255,255,255,0.20)');
-  gl.addColorStop(0.35, 'rgba(255,255,255,0.04)');
-  gl.addColorStop(0.55, 'rgba(255,255,255,0)');
-  ctx.fillStyle = gl;
-  ctx.fillRect(sx, sy, sw, sh);
-  ctx.restore();
-
-  // --- notch ---
-  const nw = lw * 0.105;
-  const nh = bez * 1.5;
-  fillRound(ctx, cx - nw / 2, topY + bez * 0.2, nw, nh, nh * 0.35, '#0B0B0D');
-
-  // --- hinge + deck ---
-  const hingeY = topY + lh;
-  const hingeH = lw * 0.009;
-  fillRound(ctx, lx + lw * 0.02, hingeY, lw * 0.96, hingeH, hingeH * 0.4, aluDark);
-
-  // The deck is a trapezoid: the front edge is nearer the camera, so wider.
-  const deckY = hingeY + hingeH;
-  const deckH = lh * 0.30;
-  const backW = lw;
-  const frontW = lw * 1.055;
-  const bl = cx - backW / 2, br = cx + backW / 2;
-  const fl = cx - frontW / 2, fr = cx + frontW / 2;
-
-  withShadow(ctx, rgba('#000000', 0.32), deckH * 0.5, deckH * 0.22, () => {
-    ctx.beginPath();
-    ctx.moveTo(bl, deckY);
-    ctx.lineTo(br, deckY);
-    ctx.lineTo(fr, deckY + deckH);
-    ctx.lineTo(fl, deckY + deckH);
-    ctx.closePath();
-    ctx.fillStyle = alu;
-    ctx.fill();
-  });
-  const deckg = ctx.createLinearGradient(0, deckY, 0, deckY + deckH);
-  deckg.addColorStop(0, rgba('#000000', 0.16));
-  deckg.addColorStop(0.35, rgba('#FFFFFF', 0.10));
-  deckg.addColorStop(1, rgba('#000000', 0.06));
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(bl, deckY); ctx.lineTo(br, deckY);
-  ctx.lineTo(fr, deckY + deckH); ctx.lineTo(fl, deckY + deckH);
-  ctx.closePath();
-  ctx.clip();
-  ctx.fillStyle = deckg;
-  ctx.fillRect(fl, deckY, frontW, deckH);
-
-  // Keyboard. Six rows including the short function row and a bottom row built
-  // around the space bar; each row widens toward the front with the perspective.
-  // Keys read as wide and short here because we're looking down the deck — the
-  // thing to get right is the gap, which is what makes a grid read as keys
-  // rather than as stripes.
-  const rowCounts = [13, 14, 14, 13, 12];
-  const rows = rowCounts.length + 1;
-  const kbTop = deckY + deckH * 0.09;
-  const kbH = deckH * 0.56;
-  const rowH = kbH / rows;
-  const keyFill = 'rgba(20,22,25,0.92)';
-
-  const rowGeom = row => {
-    const yA = kbTop + rowH * row;
-    const depth = (yA - deckY) / deckH;
-    return { yA, h: rowH * (row === 0 ? 0.52 : 0.78), w: lerp(backW, frontW, depth) * 0.87 };
-  };
-
-  rowCounts.forEach((keys, row) => {
-    const { yA, h, w } = rowGeom(row);
-    const gap = w * 0.011;
-    const kw = (w - gap * (keys - 1)) / keys;
-    for (let k = 0; k < keys; k++) {
-      const x = cx - w / 2 + k * (kw + gap);
-      fillRound(ctx, x, yA, kw, h, Math.max(0.5, kw * 0.11), keyFill);
-      fillRound(ctx, x, yA, kw, h * 0.3, Math.max(0.5, kw * 0.11), 'rgba(255,255,255,0.045)');
-    }
-  });
-
-  // Bottom row: modifiers either side of the space bar.
-  {
-    const { yA, h, w } = rowGeom(rowCounts.length);
-    const gap = w * 0.011;
-    const spaceW = w * 0.36;
-    const modW = (w - spaceW - gap * 6) / 6;
-    let x = cx - w / 2;
-    for (let k = 0; k < 7; k++) {
-      const kw = k === 3 ? spaceW : modW;
-      fillRound(ctx, x, yA, kw, h, Math.max(0.5, modW * 0.11), keyFill);
-      fillRound(ctx, x, yA, kw, h * 0.3, Math.max(0.5, modW * 0.11), 'rgba(255,255,255,0.045)');
-      x += kw + gap;
-    }
-  }
-
-  // Trackpad
-  const tpW = frontW * 0.30;
-  const tpH = deckH * 0.22;
-  const tpY = kbTop + kbH + deckH * 0.06;
-  fillRound(ctx, cx - tpW / 2, tpY, tpW, tpH, tpH * 0.14, rgba('#FFFFFF', 0.05));
-  strokeRound(ctx, cx - tpW / 2, tpY, tpW, tpH, tpH * 0.14, rgba('#000000', 0.18), Math.max(1, lw * 0.001));
-  ctx.restore();
-
-  // Front lip
-  fillRound(ctx, fl, deckY + deckH - lw * 0.004, frontW, lw * 0.008, lw * 0.004, aluDark);
-
-  return { screen: { x: sx, y: sy, w: sw, h: sh }, bottom: deckY + deckH };
-}
-
 /** Warm desk surface with softly blurred props, used behind the machine. */
 function deskScene(ctx, W, H, p, o = {}) {
   const horizon = H * (o.horizon ?? 0.42);
@@ -951,9 +800,9 @@ function deskScene(ctx, W, H, p, o = {}) {
 
   // Mug, left. On a vertical crop the props move down into the near foreground
   // and grow, so the lower third isn't bare desk.
-  const mx = W * (vertical ? 0.17 : 0.13);
-  const my = horizon + H * (vertical ? 0.34 : 0.055);
-  const mr = S * (vertical ? 0.085 : 0.055);
+  const mx = W * (vertical ? 0.135 : 0.13);
+  const my = horizon + H * (vertical ? 0.30 : 0.055);
+  const mr = S * (vertical ? 0.062 : 0.055);
   fillRound(ctx, mx - mr * 0.75, my - mr, mr * 1.5, mr * 1.5, mr * 0.16, P.white);
   ctx.beginPath();
   ctx.ellipse(mx + mr * 0.95, my - mr * 0.35, mr * 0.34, mr * 0.34, 0, -Math.PI / 2, Math.PI / 2);
@@ -966,12 +815,12 @@ function deskScene(ctx, W, H, p, o = {}) {
   ctx.fill();
 
   // Notebook + pen, right
-  const nx = W * (vertical ? 0.82 : 0.84);
-  const ny = horizon + H * (vertical ? 0.38 : 0.10);
+  const nx = W * (vertical ? 0.865 : 0.84);
+  const ny = horizon + H * (vertical ? 0.34 : 0.10);
   ctx.save();
   ctx.translate(nx, ny);
   ctx.rotate(-0.12);
-  const nS = vertical ? 1.5 : 1;
+  const nS = vertical ? 1.05 : 1;
   fillRound(ctx, -S * 0.10 * nS, -S * 0.06 * nS, S * 0.20 * nS, S * 0.13 * nS, S * 0.008, mixHex(P.cream, P.white, 0.4));
   fillRound(ctx, -S * 0.10 * nS, -S * 0.06 * nS, S * 0.016 * nS, S * 0.13 * nS, S * 0.008, P.red);
   ctx.restore();
@@ -1014,121 +863,243 @@ function deskScene(ctx, W, H, p, o = {}) {
   ctx.restore();
 }
 
-/** MacBook on a desk with the template open — the "in use" hero shot. */
-function macbookDesk(ctx, W, H, p, o) {
-  deskScene(ctx, W, H, p, o);
-  const vertical = H / W > 1.1;
-  const lw = W * (vertical ? 0.82 : 0.50);
-  const topY = H * (vertical ? 0.30 : 0.20);
-  const img = o.assets?.[o.shot || 'homepage'];
-
-  // Settle in with a slight rise, then a long slow scroll of the page.
-  const a = ease.outQuart(clamp(p * 2.4));
+/**
+ * The template as it looks on a phone.
+ *
+ * Drawn rather than scaled down from the desktop screenshot: a 900px-wide page
+ * shrunk into a phone is an unreadable grey smear, and cropping it leaves an
+ * obviously desktop layout in a portrait frame. The card thumbnails are real
+ * though — sampled straight out of the product screenshot's gallery, which is
+ * what stops the whole thing looking like a wireframe.
+ */
+function phoneScreen(ctx, x, y, w, h, o = {}) {
+  const img = o.img;
+  const scroll = (o.scroll ?? 0) * h * 0.085;
   ctx.save();
-  ctx.globalAlpha = a;
-  ctx.translate(0, lerp(H * 0.02, 0, a));
-  const m = macbook(ctx, W / 2, topY, lw, {
-    img,
-    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.5),
-  });
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = P.white;
+  ctx.fillRect(x, y, w, h);
 
-  // Screen glow spilling onto the deck below it
-  const glow = ctx.createLinearGradient(0, m.screen.y + m.screen.h, 0, m.bottom);
-  glow.addColorStop(0, rgba('#FFFFFF', 0.16));
-  glow.addColorStop(1, rgba('#FFFFFF', 0));
-  ctx.fillStyle = glow;
-  ctx.fillRect(W / 2 - lw * 0.6, m.screen.y + m.screen.h, lw * 1.2, m.bottom - (m.screen.y + m.screen.h));
-  ctx.restore();
+  const pad = w * 0.075;
+  const cw = w - pad * 2;
+
+  // The page scrolls; the status bar does not. Letting it scroll drags the
+  // title up under the dynamic island, which no phone has ever done.
+  ctx.save();
+  ctx.translate(0, -scroll);
+  let cy = y + h * 0.115;
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = P.darkBrown;
+  ctx.font = `600 ${w * 0.098}px ${BRAND.display}`;
+  ctx.fillText('College OS', x + pad + w * 0.105, cy + h * 0.045);
+  ctx.font = `400 ${w * 0.082}px ${BRAND.body}`;
+  ctx.fillText('\u{1F393}', x + pad, cy + h * 0.045);
+  cy += h * 0.078;
+
+  // Greeting field
+  fillRound(ctx, x + pad, cy, cw, h * 0.048, w * 0.022, mixHex(P.red, P.white, 0.90));
+  ctx.fillStyle = rgba(P.darkBrown, 0.62);
+  ctx.font = `400 ${w * 0.048}px ${BRAND.body}`;
+  ctx.fillText("What's your focus today?", x + pad + w * 0.045, cy + h * 0.032);
+  cy += h * 0.070;
+
+  // Quick links
+  ctx.fillStyle = P.brown;
+  ctx.font = `600 ${w * 0.052}px ${BRAND.display}`;
+  ctx.fillText('Quick Links', x + pad, cy);
+  cy += h * 0.022;
+  for (const label of ['Learning Management System', 'Gmail', 'My University Portal']) {
+    fillRound(ctx, x + pad, cy, cw, h * 0.042, w * 0.020, mixHex(P.cream, P.white, 0.30));
+    ctx.fillStyle = rgba(P.darkBrown, 0.78);
+    ctx.font = `400 ${w * 0.044}px ${BRAND.body}`;
+    ctx.fillText(label, x + pad + w * 0.045, cy + h * 0.028);
+    fillRound(ctx, x + pad + w * 0.020, cy + h * 0.017, w * 0.014, w * 0.014, w * 0.007,
+      rgba(P.brown, 0.55));
+    cy += h * 0.052;
+  }
+  cy += h * 0.016;
+
+  // Gallery — two columns, real thumbnails cropped from the product screenshot
+  ctx.fillStyle = P.brown;
+  ctx.font = `600 ${w * 0.048}px ${BRAND.display}`;
+  ctx.fillText('Gallery view', x + pad, cy);
+  cy += h * 0.020;
+
+  const labels = ['Study Notes', 'Assignment Tracker', 'Finance Tracker', 'Weekly schedule',
+    'Exam Countdown', 'Wellbeing', 'Resource Library', 'AI Prompts'];
+  const gap = w * 0.040;
+  const tw = (cw - gap) / 2;
+  const th = tw * 0.74;
+  for (let i = 0; i < 8; i++) {
+    const col = i % 2, row = (i / 2) | 0;
+    const tx = x + pad + col * (tw + gap);
+    const ty = cy + row * (th + h * 0.030);
+    if (ty > y + h + scroll) break;
+    fillRound(ctx, tx, ty, tw, th, w * 0.022, mixHex(P.cream, P.white, 0.5));
+    ctx.save();
+    roundRect(ctx, tx, ty, tw, th * 0.70, w * 0.022);
+    ctx.clip();
+    if (img) {
+      // Measured off the 900×559 product screenshot: the gallery photos start
+      // at (285, 288), 128×69 each, 139 across and 132 down.
+      const c = i % 4, rr = (i / 4) | 0;
+      ctx.drawImage(img,
+        img.width * (0.3167 + c * 0.15444), img.height * (0.5152 + rr * 0.2361),
+        img.width * 0.14222, img.height * 0.12343,
+        tx, ty, tw, th * 0.70);
+    } else {
+      ctx.fillStyle = mixHex(P.warmTan, P.cream, 0.4 + (i % 3) * 0.15);
+      ctx.fillRect(tx, ty, tw, th * 0.70);
+    }
+    ctx.restore();
+    ctx.fillStyle = rgba(P.darkBrown, 0.82);
+    ctx.font = `400 ${w * 0.038}px ${BRAND.body}`;
+    ctx.fillText(labels[i], tx + w * 0.022, ty + th * 0.87);
+  }
+
+  ctx.restore();   // scroll
+
+  // Status bar, pinned. Time to the left of the island, radios to the right.
+  ctx.fillStyle = rgba(P.darkBrown, 0.88);
+  ctx.font = `600 ${w * 0.042}px ${BRAND.body}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('9:41', x + pad, y + h * 0.036);
+  for (let i = 0; i < 4; i++) {
+    const bh2 = w * (0.011 + i * 0.006);
+    fillRound(ctx, x + w - pad - w * 0.150 + i * w * 0.018, y + h * 0.030 - bh2,
+      w * 0.012, bh2, w * 0.004, rgba(P.darkBrown, 0.82));
+  }
+  fillRound(ctx, x + w - pad - w * 0.052, y + h * 0.030 - w * 0.024, w * 0.052, w * 0.024,
+    w * 0.008, rgba(P.darkBrown, 0.30));
+  fillRound(ctx, x + w - pad - w * 0.049, y + h * 0.030 - w * 0.021, w * 0.038, w * 0.018,
+    w * 0.006, rgba(P.darkBrown, 0.82));
+
+  ctx.restore();   // clip
 }
 
 /**
- * Over-the-shoulder: someone at the desk, working in the template.
- *
- * The figure is a dark, heavily defocused foreground shape rather than a drawn
- * person. At this blur radius a shoulder and the back of a head read as human,
- * and there's no face to fall into the uncanny valley.
+ * A phone. Deliberately the device this studio renders rather than a laptop:
+ * a slab with a black bezel and one screen has no hinge, no foreshortened
+ * deck and no keyboard, which is where a vector laptop always falls apart —
+ * and it is the screen these ads are watched on anyway.
  */
-function overShoulder(ctx, W, H, p, o) {
+function phone(ctx, cx, topY, pw, o = {}) {
+  const ph = pw * 2.03;                 // ~19.5:9
+  const px = cx - pw / 2;
+  const rad = pw * 0.135;
+  const band = pw * 0.026;              // polished steel edge
+  const bez = pw * 0.030;
+
+  withShadow(ctx, rgba('#000000', 0.38), ph * 0.10, ph * 0.035, () => {
+    fillRound(ctx, px, topY, pw, ph, rad, '#2A2C31');
+  });
+
+  // Edge band, brightest where the window light hits it
+  const edge = ctx.createLinearGradient(px, 0, px + pw, 0);
+  edge.addColorStop(0, '#8E9299');
+  edge.addColorStop(0.12, '#E8EAEC');
+  edge.addColorStop(0.35, '#9DA1A8');
+  edge.addColorStop(0.85, '#C3C7CC');
+  edge.addColorStop(1, '#75787E');
+  ctx.save();
+  roundRect(ctx, px, topY, pw, ph, rad);
+  ctx.clip();
+  ctx.fillStyle = edge;
+  ctx.fillRect(px, topY, pw, ph);
+  ctx.restore();
+
+  // Black front glass
+  fillRound(ctx, px + band, topY + band, pw - band * 2, ph - band * 2, rad - band * 0.7, '#08090B');
+
+  const sx = px + band + bez;
+  const sy = topY + band + bez;
+  const sw = pw - (band + bez) * 2;
+  const sh = ph - (band + bez) * 2;
+
+  ctx.save();
+  roundRect(ctx, sx, sy, sw, sh, rad - band - bez * 0.5);
+  ctx.clip();
+  phoneScreen(ctx, sx, sy, sw, sh, o);
+
+  // Dynamic island
+  const iw = sw * 0.30, ih = sw * 0.085;
+  fillRound(ctx, sx + sw / 2 - iw / 2, sy + sh * 0.014, iw, ih, ih / 2, '#08090B');
+
+  // Glass: one soft diagonal sweep, not a hard streak
+  const gl = ctx.createLinearGradient(sx, sy, sx + sw * 1.1, sy + sh * 0.75);
+  gl.addColorStop(0, 'rgba(255,255,255,0.17)');
+  gl.addColorStop(0.32, 'rgba(255,255,255,0.03)');
+  gl.addColorStop(0.5, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(sx, sy, sw, sh);
+  ctx.restore();
+
+  return { screen: { x: sx, y: sy, w: sw, h: sh }, bottom: topY + ph };
+}
+
+/** The phone standing on the warm desk — the "in use" hero shot. */
+function phoneDesk(ctx, W, H, p, o) {
   const vertical = H / W > 1.1;
-  deskScene(ctx, W, H, p, { horizon: vertical ? 0.30 : 0.36 });
-  const lw = W * (vertical ? 0.90 : 0.44);
+  deskScene(ctx, W, H, p, { horizon: vertical ? 0.30 : 0.36, ...o });
+  const pw = W * (vertical ? 0.46 : 0.21);
+  const topY = H * (vertical ? 0.175 : 0.105);
   const img = o.assets?.[o.shot || 'homepage'];
 
-  const a = ease.outQuart(clamp(p * 2.2));
+  const a = ease.outQuart(clamp(p * 2.4));
   ctx.save();
   ctx.globalAlpha = a;
-  macbook(ctx, W * (vertical ? 0.53 : 0.55), H * (vertical ? 0.285 : 0.16), lw, {
+  ctx.translate(0, lerp(H * 0.022, 0, a));
+  const m = phone(ctx, W * 0.5, topY, pw, {
     img,
-    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.45),
+    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 0.55),
   });
-  ctx.restore();
 
-  // Foreground figure, lower left. The blur is deliberately moderate: too much
-  // and the head, neck and shoulder merge into one dark mass that reads as a
-  // smudge instead of a person. What sells it is the neck notch between head
-  // and shoulders plus the rim light — not detail.
-  // The head sits mostly below the frame edge, the way a real over-the-shoulder
-  // lens crops it, and the arm stays low and short — reaching up across the
-  // screen it stops reading as an arm and starts reading as a tentacle.
-  const S = Math.min(W, H);
-  const f = vertical
-    ? { x: W * 0.22, y: H * 0.845, r: S * 0.195 }
-    : { x: W * 0.14, y: H * 0.780, r: S * 0.230 };
-  const r = f.r;
-
-  const body = ctx.createLinearGradient(0, f.y - r * 1.2, 0, H);
-  body.addColorStop(0, '#3B2F24');
-  body.addColorStop(0.6, '#241C14');
-  body.addColorStop(1, '#15100B');
-
-  ctx.save();
-  if (ctx.filter !== undefined) ctx.filter = `blur(${S * 0.013}px)`;
-  ctx.globalAlpha = 0.95;
-  ctx.fillStyle = body;
-  ctx.strokeStyle = body;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  // Head, neck and shoulders as one silhouette. No reaching arm: from behind
-  // the subject the arms are occluded by the torso and the machine, and every
-  // attempt to draw one in canvas reads as a loop of rope rather than a limb.
+  // Contact shadow where it meets the desk, and the screen's spill in front
+  const sh = ctx.createRadialGradient(W * 0.5, m.bottom, pw * 0.02, W * 0.5, m.bottom, pw * 0.78);
+  sh.addColorStop(0, rgba(P.darkBrown, 0.42));
+  sh.addColorStop(1, rgba(P.darkBrown, 0));
+  ctx.fillStyle = sh;
   ctx.beginPath();
-  ctx.moveTo(f.x - r * 3.1, H * 1.14);
-  ctx.bezierCurveTo(f.x - r * 2.35, f.y + r * 1.02, f.x - r * 1.15, f.y + r * 0.82, f.x - r * 0.62, f.y + r * 0.58);
-  ctx.lineTo(f.x - r * 0.36, f.y + r * 0.40);
-  ctx.lineTo(f.x + r * 0.42, f.y + r * 0.40);
-  ctx.bezierCurveTo(f.x + r * 1.15, f.y + r * 0.70, f.x + r * 2.05, f.y + r * 1.24, f.x + r * 2.5, H * 1.14);
-  ctx.closePath();
+  ctx.ellipse(W * 0.5, m.bottom + pw * 0.015, pw * 0.78, pw * 0.13, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Head, tilted slightly toward the screen
-  ctx.beginPath();
-  ctx.ellipse(f.x, f.y, r * 0.72, r * 0.90, 0.13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Rim light from the screen: a bright edge down the head and over the far
-  // shoulder. This is the single strongest cue that the shape is a body.
-  ctx.save();
-  if (ctx.filter !== undefined) ctx.filter = `blur(${S * 0.009}px)`;
-  ctx.globalCompositeOperation = 'screen';
-  ctx.strokeStyle = '#FFE7BE';
-  ctx.lineCap = 'round';
-
-  ctx.globalAlpha = 0.32;
-  ctx.lineWidth = S * 0.008;
-  ctx.beginPath();
-  ctx.ellipse(f.x, f.y, r * 0.73, r * 0.91, 0.13, -Math.PI * 0.80, -Math.PI * 0.04);
-  ctx.stroke();
-
-  ctx.globalAlpha = 0.18;
-  ctx.lineWidth = S * 0.009;
-  ctx.beginPath();
-  ctx.moveTo(f.x + r * 0.42, f.y + r * 0.48);
-  ctx.bezierCurveTo(f.x + r * 1.12, f.y + r * 0.78, f.x + r * 1.88, f.y + r * 1.30, f.x + r * 2.25, H * 1.05);
-  ctx.stroke();
   ctx.restore();
 }
+
+/** Studio product shot: the phone alone on brand colour, slowly turning. */
+function phoneHero(ctx, W, H, p, o) {
+  backdrop(ctx, W, H, o);
+  const vertical = H / W > 1.1;
+  const pw = W * (vertical ? 0.50 : 0.24);
+  const img = o.assets?.[o.shot || 'homepage'];
+  const S = Math.min(W, H);
+
+  // Pool of light behind the device
+  const pool = ctx.createRadialGradient(W * 0.5, H * 0.46, S * 0.05, W * 0.5, H * 0.46, S * 0.62);
+  pool.addColorStop(0, rgba('#FFFFFF', 0.20));
+  pool.addColorStop(1, rgba('#FFFFFF', 0));
+  ctx.fillStyle = pool;
+  ctx.fillRect(0, 0, W, H);
+
+  const a = ease.outQuart(clamp(p * 2.2));
+  const ph = pw * 2.03;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(W * 0.5, H * 0.5);
+  // A few degrees of sway, so a static product shot still breathes.
+  ctx.rotate(Math.sin(p * Math.PI * 2 - 0.6) * 0.022);
+  ctx.scale(lerp(0.97, 1, a), lerp(0.97, 1, a));
+  phone(ctx, 0, -ph / 2, pw, {
+    img,
+    scroll: ease.inOutCubic(clamp(p)) * (o.scroll ?? 1),
+  });
+  ctx.restore();
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Problem / emotion scenes                                            */
@@ -1735,8 +1706,8 @@ export const SCENES = {
   testimonial:      { label: 'Testimonial',         group: 'Offer',   paint: testimonial },
   priceCard:        { label: 'Price Card',          group: 'Offer',   paint: priceCard },
   endCard:          { label: 'End Card / CTA',      group: 'Offer',   paint: endCard },
-  macbookDesk:      { label: 'MacBook on Desk',     group: 'Footage', paint: macbookDesk },
-  overShoulder:     { label: 'Over the Shoulder',   group: 'Footage', paint: overShoulder },
+  phoneDesk:        { label: 'Phone on Desk',       group: 'Footage', paint: phoneDesk },
+  phoneHero:        { label: 'Phone Product Shot',  group: 'Footage', paint: phoneHero },
   laptopShot:       { label: 'Laptop Mockup',       group: 'Footage', paint: laptopShot },
   phoneShot:        { label: 'Phone Mockup',        group: 'Footage', paint: phoneShot },
   fullShot:         { label: 'Full-bleed Screen',   group: 'Footage', paint: fullShot },

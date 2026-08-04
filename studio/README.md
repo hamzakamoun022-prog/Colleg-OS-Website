@@ -133,7 +133,7 @@ studio/
     brand.js      palette, fonts, formats, grades — mirrored from the landing page
     util.js       easing, seeded RNG, noise, colour, text layout
     motion.js     17 camera presets, each a pure function of shot progress
-    scenes.js     19 scene painters (product pages, problem shots, offer cards)
+    scenes.js     21 scene painters (product pages, problem shots, device shots)
     engine.js     plate → camera → grade → type → transition, one frame at a time
     director.js   brief → storyboard; copy banks and the optional Claude path
     audio.js      procedural score, beat-locked to the cut, plus WAV render
