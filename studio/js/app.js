@@ -15,7 +15,7 @@ import {
 import {
   exportVideo, exportStills, exportScript, exportCaptions, exportAudio,
   download, slug, extForMime, pickMimeType, cutTimes,
-  saveVideo, canShareFile, savesToPhotos, pickEncoding, webcodecsSupported,
+  universallyPlayable, pickEncoding, webcodecsSupported,
 } from './export.js';
 import { clamp, fmtTime, uid } from './util.js';
 
@@ -509,9 +509,10 @@ async function reportEncoding() {
     return;
   }
   box.innerHTML = enc.ok
-    ? `<b style="color:var(--good)">H.264 MP4</b> — saves straight to Photos and uploads anywhere.`
-    : `<b style="color:var(--bad)">${enc.label} WebM</b> — this browser can't encode H.264. `
-      + 'The file will save to Files but not to Photos. Safari, or Chrome on a Mac or iPhone, can.';
+    ? '<b style="color:var(--good)">H.264 MP4</b> — plays and uploads anywhere.'
+    : `<b style="color:var(--bad)">${enc.label} WebM</b> — this browser can't encode H.264, so `
+      + 'some editors and upload forms will reject the file. Safari, or Chrome on a Mac or '
+      + 'iPhone, can.';
 }
 
 function setVolumeUI() {
@@ -920,16 +921,7 @@ function openLightbox(item) {
   v.src = item.url;
   box.hidden = false;
   v.play().catch(() => { /* the controls are right there */ });
-  const btn = $('lbDownload');
-  btn.textContent = canShareFile(item.blob, item.filename) ? '⤓ Save video' : '⬇ Download';
-  btn.onclick = async () => {
-    const how = await saveVideo(item.blob, item.filename);
-    if (how === 'shared') toast('Saved.', 'ok');
-    else if (how === 'downloaded' && !savesToPhotos(item.codec)) {
-      toast(`Downloaded. This file is ${item.codecLabel} — it will save to Files but not to `
-        + 'Photos; only H.264 in an MP4 goes into the camera roll.', 'err');
-    }
-  };
+  $('lbDownload').onclick = () => download(item.blob, item.filename);
 }
 
 function closeLightbox() {
@@ -1049,28 +1041,16 @@ async function doExportVideo() {
     });
     showStrip('library');
 
-    // Saving has to come from its own tap. iOS only honours navigator.share
-    // while the gesture that triggered it is still "active" — a few seconds —
-    // and a render takes far longer than that, so sharing straight off the
-    // Export button always fails. Open the player instead and let the Save
-    // button there carry a fresh gesture. Desktops have no such rule, so a
-    // plain download still fires immediately.
-    let how = 'downloaded';
-    if (canShareFile(blob, name)) {
-      openLightbox(state.library[0]);
-      how = 'ready';
-    } else {
-      download(blob, name);
-    }
+    download(blob, name);
 
     // One warning if something is genuinely wrong with the file, then one line
     // saying where it went. Chaining these as a single if/else let a success
     // message hide a dropped-frame count.
     const problem =
-      !savesToPhotos(codec)
-        ? `This file is ${codec.label}, not H.264. Photos and most social apps only take `
-          + 'H.264 in an MP4, so it will save to Files but never appear in your camera roll. '
-          + 'Safari and Chrome on a Mac or iPhone can encode H.264 — this browser cannot.'
+      !universallyPlayable(codec)
+        ? `This file is ${codec.label}, not H.264. It downloads and plays fine, but most `
+          + 'upload forms and editors only take H.264 in an MP4. Safari, and Chrome on a Mac '
+          + 'or iPhone, can encode H.264 — this browser cannot.'
       : !codec.audio && state.brief.music !== 'none'
         ? 'No audio track made it into the file. Play it once in the Library — if it is silent '
           + 'there too, the browser blocked the score.'
@@ -1085,9 +1065,8 @@ async function doExportVideo() {
           + 'open from a .mp4, so the studio wrote a real .webm instead.'
       : null;
 
-    toast(`${how === 'ready' ? 'Ready' : 'Downloaded'} — ${name}, ${mb} MB, `
-      + `${codec.label}${codec.audio ? ' with audio' : ''}.`
-      + (how === 'ready' ? ' Tap Save video to put it in Photos.' : ''), 'ok');
+    toast(`Downloaded — ${name}, ${mb} MB, ${codec.label}`
+      + `${codec.audio ? ' with audio' : ''}. It's in the Library below.`, 'ok');
     if (problem) toast(problem, 'err');
   } catch (err) {
     console.error(err);

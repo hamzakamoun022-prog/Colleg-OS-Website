@@ -641,61 +641,14 @@ export function download(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-/* ------------------------------------------------------------------ */
-/* Saving on a phone                                                   */
-/*                                                                     */
-/* `<a download>` is a desktop idea. On iOS it cannot put anything in  */
-/* Photos at all, and for a blob: URL it often previews the file       */
-/* instead of saving it — which is exactly what "I can't save the      */
-/* video" looks like. The share sheet is the only route to Photos, and */
-/* it only offers "Save Video" for a container iOS can decode, so the  */
-/* codec and the save path are the same problem.                       */
-/* ------------------------------------------------------------------ */
-
-/** Whether this browser can hand a video file to the OS share sheet. */
-export function canShareFile(blob, filename) {
-  try {
-    if (!navigator.canShare || !navigator.share) return false;
-    return navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] });
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Offer the file to the OS. Resolves to what actually happened, so the caller
- * can tell the user rather than guess.
+ * Whether a file is one every phone, editor and ad platform will take.
  *
- * @returns {Promise<'shared'|'cancelled'|'downloaded'>}
+ * H.264 in an MP4 is the only universally safe answer. A VP9 WebM downloads
+ * and plays in a browser, but iOS Photos will not import it and most upload
+ * forms reject it, so it is worth knowing which one you have.
  */
-export async function saveVideo(blob, filename) {
-  if (canShareFile(blob, filename)) {
-    try {
-      await navigator.share({
-        files: [new File([blob], filename, { type: blob.type })],
-        title: filename,
-      });
-      return 'shared';
-    } catch (err) {
-      // AbortError is the user dismissing the sheet — not a failure to report.
-      if (err && err.name === 'AbortError') return 'cancelled';
-      // NotAllowedError means the tap that started this has expired. Nothing to
-      // do here but fall through; the caller's job is not to get into that
-      // state, by asking for the save from its own gesture.
-    }
-  }
-  download(blob, filename);
-  return 'downloaded';
-}
-
-/**
- * Whether a file will be accepted by the phone's camera roll.
- *
- * Photos takes H.264 or HEVC in MP4/MOV and nothing else. A VP9 WebM can still
- * be saved to Files, but it will never appear in Photos and most social apps
- * will refuse the upload, so it is worth saying which one you have.
- */
-export const savesToPhotos = codec =>
+export const universallyPlayable = codec =>
   !!codec && (codec.codec === 'h264' || codec.codec === 'hevc');
 
 export const slug = s =>
