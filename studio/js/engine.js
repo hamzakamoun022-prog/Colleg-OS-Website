@@ -94,23 +94,19 @@ function drawTextBlock(ctx, W, H, block, p, o) {
   else top = H * 0.5 - totalH / 2;
   top += (block.offsetY || 0) * H;
 
-  // Scrim keeps copy legible over busy footage. Held flat across the text band
-  // and feathered only at the edges, so the copy never sits on a gradient.
-  if (block.scrim) {
-    const pad = size * 0.9;
-    const a = block.scrim === true ? 0.9 : block.scrim;
-    const c = o.tone === 'dark' ? P.ink : P.cream;
-    const g = ctx.createLinearGradient(0, top - pad, 0, top + totalH + pad);
-    g.addColorStop(0, rgba(c, 0));
-    g.addColorStop(0.22, rgba(c, a));
-    g.addColorStop(0.78, rgba(c, a));
-    g.addColorStop(1, rgba(c, 0));
-    ctx.save();
-    ctx.globalAlpha = clamp(inP * 2);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, top - pad, W, totalH + pad * 2);
-    ctx.restore();
-  }
+  // Copy over footage has to be lifted off it somehow. A tinted band is the
+  // obvious way and reads as exactly what it is — a rectangle of a different
+  // colour laid across the shot. A shadow held tight to the letterforms does
+  // the same work and leaves the image alone, so `scrim` now asks for more
+  // shadow rather than a plate behind the words.
+  const lift = !!block.scrim;
+  const setShadow = () => {
+    if (block.shadow === false) return;
+    const dark = o.tone === 'dark';
+    ctx.shadowColor = rgba(dark ? '#000000' : P.darkBrown, lift ? 0.45 : 0.18);
+    ctx.shadowBlur = size * (lift ? 0.6 : 0.28);
+    ctx.shadowOffsetY = size * (lift ? 0.06 : 0.04);
+  };
 
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
@@ -197,11 +193,7 @@ function drawTextBlock(ctx, W, H, block, p, o) {
           ctx.globalAlpha *= clamp(wp * 1.6);
           ctx.translate(0, lerp(size * 0.35, 0, ease.outQuart(wp)));
           ctx.fillStyle = isMarked(marks, ci) ? accent : color;
-          if (block.shadow !== false) {
-            ctx.shadowColor = rgba(o.tone === 'dark' ? '#000000' : P.darkBrown, 0.18);
-            ctx.shadowBlur = size * 0.28;
-            ctx.shadowOffsetY = size * 0.04;
-          }
+          setShadow();
           ctx.fillText(word, cx, y);
           ctx.restore();
         }
@@ -211,11 +203,7 @@ function drawTextBlock(ctx, W, H, block, p, o) {
     } else {
       // Whole-line draw, with per-word colouring for emphasis.
       let cx = x0, ci = charCursor;
-      if (block.shadow !== false) {
-        ctx.shadowColor = rgba(o.tone === 'dark' ? '#000000' : P.darkBrown, 0.18);
-        ctx.shadowBlur = size * 0.28;
-        ctx.shadowOffsetY = size * 0.04;
-      }
+      setShadow();
       for (const word of line.split(' ')) {
         ctx.fillStyle = isMarked(marks, ci) ? accent : color;
         ctx.fillText(word, cx, y);
