@@ -14,6 +14,9 @@ import {
   fillRound, roundRect, mixHex,
 } from './util.js';
 
+// The frame rate the motion presets' blur amounts were tuned against.
+const BASE_FPS = 30;
+
 const PLATE_OVERSCAN = 1.28; // extra plate resolution so zooms stay sharp
 
 /* ------------------------------------------------------------------ */
@@ -622,6 +625,15 @@ export class Renderer {
 
     // --- camera ---
     const cam = camera(scene.motion, p, scene.motionAmount ?? 1, noise, 1);
+
+    // Motion blur is a function of shot progress, so on its own it would be
+    // identical at any frame rate. A real camera's exposure shortens as the
+    // frame rate rises, so a 120fps export needs about a quarter of the smear a
+    // 30fps one does — without this, high frame rate footage just looks like
+    // soft 30fps instead of crisp.
+    if (opts.fps && opts.fps !== BASE_FPS) {
+      cam.blur *= clamp(BASE_FPS / opts.fps, 0.2, 1.4);
+    }
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = scene.tone === 'dark' ? P.ink : P.cream;

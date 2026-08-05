@@ -191,7 +191,7 @@ export async function pickEncoding(width, height, fps) {
  */
 export async function exportVideoFast(o) {
   const {
-    canvas, renderer, board, assets, fps = 30, audio,
+    canvas, renderer, board, assets, fps = 30, audio, quality = 'hd',
     onProgress = () => {}, signal,
   } = o;
 
@@ -242,7 +242,7 @@ export async function exportVideoFast(o) {
   const frameUs = 1e6 / fps;
   for (let i = 0; i < frames; i++) {
     if (signal?.aborted) break;
-    renderer.render(ctx, board, i / fps, { assets, quality: 'hd' });
+    renderer.render(ctx, board, i / fps, { assets, quality, fps });
     const frame = new VideoFrame(canvas, { timestamp: Math.round(i * frameUs), duration: Math.round(frameUs) });
     // A keyframe every two seconds keeps scrubbing responsive without
     // inflating the file the way an all-intra stream would.
