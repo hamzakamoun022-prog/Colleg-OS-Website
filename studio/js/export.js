@@ -630,8 +630,42 @@ export function zipStore(files) {
   return new Blob([...parts, ...central, end], { type: 'application/zip' });
 }
 
+/** True when this page is inside a frame, including a cross-origin one. */
+export function inFrame() {
+  try { return window.self !== window.top; } catch { return true; }
+}
+
+/**
+ * Hand the file to the browser.
+ *
+ * `<a download>` is silently ignored inside a sandboxed iframe unless the
+ * embedder set `allow-downloads` — no error, no event, the tap just does
+ * nothing, which is precisely what "the download button doesn't work" looks
+ * like. Any embedded copy of this page is in that position.
+ *
+ * Opening the blob in a tab of its own is the way out: the file is then a
+ * normal document and the browser's own save UI takes over. On iOS that means
+ * the video plays with the share button available; on desktop the tab offers a
+ * download. Where the page is not framed, the anchor is still the better
+ * experience, because it keeps the filename.
+ *
+ * @returns {'downloaded'|'opened'|'blocked'}
+ */
 export function download(blob, filename) {
   const url = URL.createObjectURL(blob);
+
+  if (inFrame()) {
+    const w = window.open(url, '_blank');
+    if (w) {
+      // The tab is reading from this URL — revoking it now would blank it.
+      setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
+      return 'opened';
+    }
+    // Popups blocked too. Nothing left that a framed page is allowed to do.
+    URL.revokeObjectURL(url);
+    return 'blocked';
+  }
+
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -639,6 +673,7 @@ export function download(blob, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return 'downloaded';
 }
 
 /**

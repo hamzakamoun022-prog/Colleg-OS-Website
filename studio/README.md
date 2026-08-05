@@ -129,6 +129,14 @@ the browser's downloads folder. There is deliberately no share sheet: it is an
 extra tap on every export, and on iOS it can only be raised from a gesture that
 is still active, which a render outlasts.
 
+**Run it from a real URL.** A sandboxed iframe silently ignores `<a download>`
+unless the embedder set `allow-downloads` — no error, no event, the tap simply
+does nothing. Any embedded copy of this page is in that position. When the
+studio detects it is framed it opens the finished video in a tab of its own
+instead, where the browser's normal save UI applies, but that is a workaround.
+Served from `getcollegeos.com/studio/` — or any plain URL — the download button
+is just a download button.
+
 Photos is a separate matter. iOS only imports **H.264 in an MP4**, so if you
 want a clip in the camera roll you need an export this browser could encode as
 H.264 — save it to Files first, then add it to Photos from there. The Export

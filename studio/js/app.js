@@ -15,7 +15,7 @@ import {
 import {
   exportVideo, exportStills, exportScript, exportCaptions, exportAudio,
   download, slug, extForMime, pickMimeType, cutTimes,
-  universallyPlayable, pickEncoding, webcodecsSupported,
+  universallyPlayable, pickEncoding, webcodecsSupported, inFrame,
 } from './export.js';
 import { clamp, fmtTime, uid } from './util.js';
 
@@ -921,7 +921,16 @@ function openLightbox(item) {
   v.src = item.url;
   box.hidden = false;
   v.play().catch(() => { /* the controls are right there */ });
-  $('lbDownload').onclick = () => download(item.blob, item.filename);
+  const dlBtn = $('lbDownload');
+  dlBtn.textContent = inFrame() ? '⧉ Open to save' : '⬇ Download';
+  dlBtn.onclick = () => {
+    const how = download(item.blob, item.filename);
+    if (how === 'opened') toast('Opened in a new tab — save it from there.', 'ok');
+    else if (how === 'blocked') {
+      toast('This frame blocks downloads and new tabs. Open the studio at '
+        + 'getcollegeos.com/studio/ to save the file.', 'err');
+    }
+  };
 }
 
 function closeLightbox() {
@@ -1041,7 +1050,7 @@ async function doExportVideo() {
     });
     showStrip('library');
 
-    download(blob, name);
+    const how = download(blob, name);
 
     // One warning if something is genuinely wrong with the file, then one line
     // saying where it went. Chaining these as a single if/else let a success
@@ -1065,8 +1074,17 @@ async function doExportVideo() {
           + 'open from a .mp4, so the studio wrote a real .webm instead.'
       : null;
 
-    toast(`Downloaded — ${name}, ${mb} MB, ${codec.label}`
-      + `${codec.audio ? ' with audio' : ''}. It's in the Library below.`, 'ok');
+    if (how === 'blocked') {
+      toast(`Rendered ${name} (${mb} MB) — but this page is embedded in a frame that blocks both `
+        + 'downloads and new tabs, so there is no way to hand you the file from here. It is in the '
+        + 'Library below and still plays. Open the studio at getcollegeos.com/studio/ to save it.', 'err');
+    } else {
+      toast(how === 'opened'
+        ? `${name} — ${mb} MB, ${codec.label}${codec.audio ? ' with audio' : ''}. Opened in a new tab: `
+          + 'use your browser\u2019s share or download button there to save it.'
+        : `Downloaded — ${name}, ${mb} MB, ${codec.label}`
+          + `${codec.audio ? ' with audio' : ''}. It's in the Library below.`, 'ok');
+    }
     if (problem) toast(problem, 'err');
   } catch (err) {
     console.error(err);
