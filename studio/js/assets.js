@@ -31,6 +31,7 @@ async function loadFonts() {
     '300 32px "DM Sans"',
     '400 32px "DM Sans"',
     '500 32px "DM Sans"',
+    '700 32px "DM Sans"',
   ];
   await Promise.all(faces.map(f => document.fonts.load(f, 'Aa 0123 —').catch(() => {})));
   await document.fonts.ready;

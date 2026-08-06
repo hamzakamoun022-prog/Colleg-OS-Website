@@ -1422,6 +1422,78 @@ function chaosApps(ctx, W, H, p, o) {
 }
 
 /** Panic notifications stacking up faster than you can read them. */
+/**
+ * The notification stack as an opening frame.
+ *
+ * `notifPanic` staggers its cards in from nothing, which means frame one is a
+ * bare cream field — the exact thing that reads as blank at scroll speed. Here
+ * the stack is already six deep when the shot starts and only the last two are
+ * still dropping, so there is no moment where the frame is empty. The stack is
+ * cropped at the top edge too: a card sliced by the frame implies more above it
+ * and makes the pile feel like a real backlog rather than a tidy list.
+ */
+function notifHook(ctx, W, H, p, o) {
+  backdrop(ctx, W, H, { tone: 'cream' });
+  // Ordered oldest at the top, newest at the bottom. The one the hook line
+  // refers to has to be legible in the very first frame, so it is the settled
+  // bottom card — never the one still animating.
+  const notes = o.notes || [
+    ['📨', 'Group project', 'you were tagged'],
+    ['📅', 'You missed', 'Statistics tutorial'],
+    ['🔔', 'Lab report', 'due tomorrow 9am'],
+    ['📚', 'Reading overdue', '3 chapters behind'],
+    ['💳', 'Low balance', '$12.40 left'],
+    ['📉', 'Quiz grade posted', 'you missed it'],
+    ['⚠️', 'Essay due', 'in 7 hours'],
+  ];
+  const w = Math.min(W * 0.86, H * 0.60);
+  const h = w * 0.175;
+  const cx = W / 2 - w / 2;
+  const gap = h * 0.80;
+
+  // Bottom card sits just above the hook line; the pile runs up off the frame.
+  const bottomY = H * (o.bandTop ?? 0.60) - h;
+  // Only the top card is still arriving. Everything below it is already there,
+  // so there is no frame in which the pile looks sparse.
+  const dropping = o.dropping ?? 1;
+
+  notes.forEach((n, i) => {
+    const fromBottom = notes.length - 1 - i;
+    const a = i >= dropping ? 1 : ease.outQuart(clamp((p - i * 0.10) / 0.26));
+    if (a <= 0) return;
+    const y = bottomY - fromBottom * gap;
+    ctx.save();
+    ctx.globalAlpha = clamp(a * 1.4);
+    ctx.translate(cx + w / 2, y + h / 2);
+    ctx.translate(0, lerp(-h * 0.55, 0, a));
+    ctx.rotate(lerp(0.05 * (i % 2 ? 1 : -1), 0, a));
+    ctx.scale(lerp(1.06, 1, a), lerp(1.06, 1, a));
+    ctx.translate(-w / 2, -h / 2);
+    withShadow(ctx, rgba(P.darkBrown, 0.24), h * 0.42, h * 0.13, () => {
+      fillRound(ctx, 0, 0, w, h, h * 0.26, P.white);
+    });
+    ctx.textBaseline = 'middle';
+    ctx.font = font(400, h * 0.40);
+    ctx.fillText(n[0], h * 0.28, h * 0.5);
+    ctx.font = font(500, h * 0.30, 'body');
+    ctx.fillStyle = P.text;
+    ctx.fillText(n[1], h * 0.88, h * 0.34);
+    ctx.font = font(500, h * 0.27, 'body');
+    // The newest, most urgent line carries the accent; the rest stay muted so
+    // one thing in the pile is doing the shouting.
+    ctx.fillStyle = i === notes.length - 1 ? P.red : rgba(P.textLight, 0.95);
+    ctx.fillText(n[2], h * 0.88, h * 0.70);
+    ctx.restore();
+  });
+
+  // Cream fade at the top edge so the cropped pile dissolves rather than cuts.
+  const fade = ctx.createLinearGradient(0, 0, 0, H * 0.14);
+  fade.addColorStop(0, rgba(P.cream, 0.92));
+  fade.addColorStop(1, rgba(P.cream, 0));
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, W, H * 0.14);
+}
+
 function notifPanic(ctx, W, H, p, o) {
   backdrop(ctx, W, H, { tone: 'cream' });
   const notes = o.notes || [
@@ -1981,6 +2053,7 @@ export const SCENES = {
   phoneShot:        { label: 'Phone Mockup',        group: 'Footage', paint: phoneShot },
   fullShot:         { label: 'Full-bleed Screen',   group: 'Footage', paint: fullShot },
   typePlate:        { label: 'Type Plate',          group: 'Footage', paint: typePlate },
+  notifHook:        { label: 'Notification Pile',   group: 'Problem', paint: notifHook },
 };
 
 export const SCENE_KEYS = Object.keys(SCENES);
